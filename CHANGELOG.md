@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Credential 1 "Coral", Access Rights 1 "Cyan", Event Log 1 "Beige", Schedule 1
   "Saffron" / Calendar 1 "Cream" (canonical pattern: B-AAC), File 1 "Ivory",
   Notification Class 1 "Crimson", Network Port 1 "Vermilion".
-- Verified live on the wire this session (`bacpypes3`): Who-Is/I-Am,
+- Verified live on the wire this session (a real BACnet client): Who-Is/I-Am,
   ReadProperty across every object, DS-ACUC-B's WriteProperty unlock command
   (Cobalt's Present_Value/Lock_Status), and DM-BR-B's Backup_And_Restore_State
   transition through `idle -> performing-abackup -> idle` via
