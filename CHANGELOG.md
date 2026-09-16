@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Restructured documentation to match the series' new shape (see
+  `BACnetProfileExample-B-SS-CPP`): `README.md` cut down to what this example
+  is (profile, device tree, BIBB/object support, build/run/verify, footprint,
+  series table), long-form extension/review material moved to a new
+  `TUTORIAL.md`, and a new `docs/PICS.md` (ANSI/ASHRAE 135 Annex A shape,
+  generated objects-and-properties section) replaces the README's old inline
+  conformance table. `docs/objects.json` gained a `Device` entry (previously
+  omitted from the generated tables).
+- Switched the documented and CI build from a prebuilt **STATIC** stack
+  library (`tools/build-stack-static.sh`) to the adapter's default **SOURCE**
+  mode: `cmake -B build -S .` / `cmake --build build --config Release` now
+  compiles the stack straight into the executable, identically on every
+  platform and with no series-root script. `.github/workflows/release.yml`
+  dropped the static-library cache/build steps and the matrix `lib:` entries,
+  asserts `CAS_BACNET_STACK_LINK=SOURCE`, records `"link_mode": "SOURCE"` in
+  `metrics.json`, and now packages `TUTORIAL.md` / `docs/PICS.md` with each
+  release. The published Footprint numbers are still from the old STATIC
+  build; the next release refreshes them under SOURCE.
+- `main.cpp`'s `CHANGE ALL OF THIS BEFORE YOU SHIP` block now carries a
+  per-field comment (vendor ID, `DEVICE_NAME` uniqueness warning, model name,
+  DCC password) absorbed from the old README's "Before you ship" table.
+
 ## [1.0.0] - 2026-09-15
 
 ### Added
