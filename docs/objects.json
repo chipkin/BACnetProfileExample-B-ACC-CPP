@@ -3,7 +3,7 @@
     {
       "type": "Device",
       "instance": 389009,
-      "name": "Rainbow",
+      "name": "Chipkin Example B-ACC",
       "app": [
         "Object_Name",
         "Description",

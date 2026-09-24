@@ -39,7 +39,7 @@ below and [docs/PICS.md](docs/PICS.md) for the precise, per-property picture.
 
 | Object | Name | Notes |
 |---|---|---|
-| Device 389009 | Rainbow | `--deviceID` overrides |
+| Device 389009 | Chipkin Example B-ACC | `--deviceID` overrides |
 | Analog Input 1 | Bronze | REAL, degrees Celsius; read-only; COV-subscribable |
 | Binary Input 1 | Emerald | active/inactive; read-only |
 | Multi-State Input 1 | Hot Pink | state 1..3; read-only |
@@ -208,7 +208,7 @@ Common helper (common/) version: 2.5.0
 FYI: Listening for BACnet/IP on UDP port 47821 (Network Port 1).
 TX 21 bytes to 192.168.3.255:47821 (broadcast) (Network Port 1)
 TX 8 bytes to 192.168.3.255:47821 (broadcast) (Network Port 1)
-FYI: Device 389009 ("Rainbow") ready. Vendor ID 389. Press 'h' for help.
+FYI: Device 389009 ("Chipkin Example B-ACC") ready. Vendor ID 389. Press 'h' for help.
 ```
 
 The two `TX` lines are the start-up I-Am and Who-Is the device broadcasts to
