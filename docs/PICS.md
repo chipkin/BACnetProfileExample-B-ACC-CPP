@@ -20,10 +20,10 @@ see [README.md](../README.md).
 | **Vendor Identifier** | 389 |
 | **Product Name** | CAS BACnet Stack Example - B-ACC |
 | **Product Model Number** | CAS BACnet Stack Example - B-ACC |
-| **Application Software Version** | 1.0.0 |
-| **Firmware Revision** | 1.0.0 |
+| **Application Software Version** | 1.1.0 |
+| **Firmware Revision** | 6.0.23.0 (the CAS BACnet Stack version) |
 | **BACnet Protocol Version** | 1 |
-| **BACnet Protocol Revision** | 24 |
+| **BACnet Protocol Revision** | 30 |
 
 **Product Description:** a BACnet/IP Access Control Controller built on the CAS
 BACnet Stack. It presents the access family (Access Door, Credential Data
@@ -32,18 +32,18 @@ Log, a Schedule/Calendar pair, a File object for backup/restore, a
 Notification Class, three read-only sensor objects inherited from the series'
 B-SS baseline, and the required Network Port. It is a tutorial for implementers
 of the B-ACC profile, and it is honest in this document and in
-[TODO.md](../TODO.md) about the parts of Annex L.5's requirements the CAS
+[TODO.md](../TODO.md) about the parts of Annex L.6.2's requirements the CAS
 BACnet Stack's customer-facing API cannot yet complete.
 
 ## 2. BACnet standardized device profile (Annex L)
 
-**B-ACC - BACnet Access Control Controller** (Annex L.6).
-
-This device claims exactly one profile. Because the B-ACC requirements are a
-superset of B-GENERAL's, a conformant B-ACC device also satisfies
-**B-GENERAL** (Annex L.8); that is subsumption, not a second claim. **AE-AC-B**
-is claimed by the profile but is **not actually functional** in this example -
-see §3 and [TODO.md #1](../TODO.md).
+**B-ACC - BACnet Access Control Controller** (Annex L.6.2). This is a
+**Blocked Example**: the stack cannot yet perform the B-ACC Profile Function
+through its customer interface, so the profile is **not** claimed in full.
+DS-ACUC-B and DS-ACSC-B are blocked on stack
+[#2150](https://github.com/chipkin/cas-bacnet-stack/issues/2150) and AE-AC-B
+on stack [#2044](https://github.com/chipkin/cas-bacnet-stack/issues/2044) - see
+§3 and [TODO.md](../TODO.md).
 
 ## 3. BIBBs supported (Annex K)
 
@@ -54,13 +54,12 @@ see §3 and [TODO.md #1](../TODO.md).
 | DS-WP-B | Data Sharing - WriteProperty - B | ✅ |
 | DS-WPM-B | Data Sharing - WritePropertyMultiple - B | ✅ |
 | DS-COV-B | Data Sharing - COV - B | ✅ |
-| DS-ACUC-B | Data Sharing - Access Control Unlock Command - B | ✅ |
-| DS-ACSC-B | Data Sharing - Access Control Supervisory Command - B | ✅ |
-| AE-AC-B | Alarm and Event - Access Control - B | ☐ **not functional - see below** |
+| DS-ACUC-B | Data Sharing - Access Control User Configuration - B (K.1.34) | **no** - blocked on stack #2150 |
+| DS-ACSC-B | Data Sharing - Access Control Site Configuration - B (K.1.36) | **no** - blocked on stack #2150 |
+| AE-AC-B | Alarm and Event Management - Access Control - B (K.2.32) | **no** - blocked on stack #2044 |
 | AE-ACK-B | Alarm and Event - Acknowledge - B | ✅ |
 | AE-INFO-B | Alarm and Event - Information - B | ✅ |
-| AE-EL-I-B | Alarm and Event - Event Log - Initiate - B | ✅ |
-| SCHED-I-B | Scheduling - Initiate - B | ✅ |
+| SCHED-I-B | Scheduling - Internal - B | ✅ |
 | DM-BR-B | Device Management - Backup and Restore - B | ✅ |
 | DM-DDB-A | Device Management - Dynamic Device Binding - A | ✅ |
 | DM-DDB-B | Device Management - Dynamic Device Binding - B | ✅ |
@@ -70,20 +69,34 @@ see §3 and [TODO.md #1](../TODO.md).
 | DM-UTC-B | Device Management - UTC Time Synchronization - B | ✅ |
 | DM-RD-B | Device Management - Reinitialize Device - B | ✅ |
 
-**AE-AC-B is claimed by the profile and its supporting objects/properties/
-services are all present** (Access_Event is a real, readable/writable property
-on Access Point 1 "Copper", and ConfirmedEventNotification /
-UnconfirmedEventNotification are enabled services) **but no event notification
-is ever generated**, because the intrinsic algorithm this BIBB depends on is
-not on the CAS BACnet Stack's customer-facing API at the pinned commit:
-`BACnetStack_SetIntrinsicAccessEventAlgorithm` /
-`BACnetStack_SetAccessEventContext` were moved to the stack's test-tool-only
-interface, and the generic `SetIntrinsicChangeOfStateAlgorithmUnsigned`
-substitute rejects `objectType=accessPoint` (confirmed by calling it against a
-running binary). **Filed:**
+**DS-ACUC-B and DS-ACSC-B** (K.1.34, K.1.36) mean answering reads and writes
+of the standard properties of the access objects. At the Stack Pin (`6.x` @
+`64b2cfac5`) six required properties cannot be served through the customer
+interface: Access Credential `Authentication_Factors` and
+`Assigned_Access_Rights`, Access Rights `Positive_Access_Rules` and
+`Negative_Access_Rules`, and Access Point `Access_Doors` answer Error
+unknown-property, and Access Point `Access_Event_Credential` answers Abort.
+They are the properties that say who may pass where. **Filed:**
+[chipkin/cas-bacnet-stack#2150](https://github.com/chipkin/cas-bacnet-stack/issues/2150).
+Earlier versions of this document named these two BIBBs "Unlock Command" and
+"Supervisory Command" and ticked them for the door write and the
+Authorization_Mode write; that was wrong.
+
+**AE-AC-B** (K.2.32: generate ACCESS_EVENT notifications): Access_Event is a
+real, readable/writable property on Access Point 1 "Copper", and
+ConfirmedEventNotification / UnconfirmedEventNotification are enabled
+services, **but no event notification is ever generated**, because the
+intrinsic access-event algorithm is not on the CAS BACnet Stack's
+customer-facing API (it is on the test-tool interface only), and the generic
+change-of-state algorithm rejects `objectType=accessPoint`. **Filed:**
 [chipkin/cas-bacnet-stack#2044](https://github.com/chipkin/cas-bacnet-stack/issues/2044).
-Treat this row as ☐, not ✅, for BTL purposes; the README's profile table
-already reflects this.
+
+**AE-EL-I-B** (K.2.21: "The B device collects the event notifications in an
+internal buffer") is not claimed. It is not a B-ACC BIBB - the Annex L.6 table
+lists it for B-AACC only - and Event Log 1 "Beige" never collects anything,
+because no notification is generated. Earlier versions ticked it as "Event Log
+- Initiate". **DM-BR-B** is likewise beyond the B-ACC table (B-AACC only) and
+is supported as an extra.
 
 No other BIBB is supported. In particular this device does not support any
 `-A` variant beyond DM-DDB-A, and does not support trending (T-*).
@@ -97,7 +110,7 @@ No other BIBB is supported. In particular this device does not support any
 | WriteProperty | no | **yes** |
 | WritePropertyMultiple | no | **yes** |
 | SubscribeCOV | no | **yes** |
-| Who-Is | no | **yes** |
+| Who-Is | **yes** (start-up) | **yes** |
 | I-Am | **yes** | **yes** |
 | Who-Has | no | **yes** |
 | I-Have | **yes** | no |
@@ -109,7 +122,7 @@ No other BIBB is supported. In particular this device does not support any
 | GetEventInformation | no | **yes** |
 | ConfirmedEventNotification | enabled, **never actually sent** (TODO.md #1) | no |
 | UnconfirmedEventNotification | enabled, **never actually sent** (TODO.md #1) | no |
-| AtomicReadFile | no | **yes**, but see [TODO.md #5](../TODO.md) (a live read during an active backup session aborted) |
+| AtomicReadFile | no | **yes**; a live read during an active backup session aborted at stack 6.0.21, not re-tested at this pin ([TODO.md #4](../TODO.md)) |
 | AtomicWriteFile | no | **yes** |
 | ReadRange | no | **yes** (native to the Event Log object once added; not a separately-gated service) |
 
@@ -118,12 +131,15 @@ response to Who-Is.
 
 ## 5. Segmentation capability
 
-Segmentation is **not supported** in either direction
-(`Segmentation_Supported` = `no-segmentation`). `Max_APDU_Length_Accepted` is
-1476 octets, the BACnet/IP maximum. This is a real constraint for
-ReadPropertyMultiple / WritePropertyMultiple against the access family's
-larger objects: a request whose reply would exceed one APDU fails rather than
-segmenting.
+Segmentation is **supported in both directions**
+(`Segmentation_Supported` = `segmented-both`), by the stack: at `6.x` @
+`64b2cfac5` the customer build compiles `STACK_OPTION_SEGMENTATION` in (stack
+#2992), and this example keeps the stack's defaults - `Max_Segments_Accepted`
+16 and `APDU_Segment_Timeout` read on the wire. Table 12-13 footnote 1: "These
+properties are required if, and shall be present only if, segmentation of any
+kind is supported". `Max_APDU_Length_Accepted` is 1476 octets, the BACnet/IP
+maximum. (At the previous pin, `abd4cee1`, this example answered
+`no-segmentation`.)
 
 ## 6. Standard object types supported
 
@@ -135,9 +151,9 @@ No object is dynamically creatable or deletable at run time.
 | Analog Input | 1 | Bronze | - |
 | Binary Input | 1 | Emerald | - |
 | Multi-State Input | 1 | Hot Pink | - |
-| Access Door | 1 | Cobalt | Present_Value (commandable, DS-ACUC-B) |
+| Access Door | 1 | Cobalt | Present_Value (commandable) |
 | Credential Data Input | 1 | Flax | - |
-| Access Point | 1 | Copper | Access_Event, Authorization_Mode (DS-ACSC-B) |
+| Access Point | 1 | Copper | Access_Event, Authorization_Mode (stored only) |
 | Access Zone | 1 | Ebony | Global_Identifier |
 | Access Credential | 1 | Coral | Global_Identifier |
 | Access Rights | 1 | Cyan | Global_Identifier |
@@ -202,7 +218,7 @@ Every object this example creates, and every REQUIRED property of each (per ANSI
 | Protocol_Object_Types_Supported | BACnetObjectTypesSupported | stack | no |
 | Object_List | BACnetARRAY[N] of BACnetObjectIdentifier | stack | no |
 | Max_APDU_Length_Accepted | Unsigned | stack default, accepted (`CAS_BACNET_DEVICE_DEFAULT_MAX_APDU_LENGTH_ACCEPTED`) | no |
-| Segmentation_Supported | BACnetSegmentation | stack default, accepted (`BACnetSegmentation::noSegmentation`) | no |
+| Segmentation_Supported | BACnetSegmentation | stack default, accepted (`BACnetSegmentation::segmentedBoth` with `STACK_OPTION_SEGME) | no |
 | APDU_Timeout | Unsigned | stack default, accepted (`CAS_BACNET_DEVICE_DEFAULT_APDU_TIMEOUT`) | no |
 | Number_Of_APDU_Retries | Unsigned | stack default, accepted (`CAS_BACNET_DEVICE_DEFAULT_NUMBER_OF_APDU_RETRIES`) | no |
 | Device_Address_Binding | BACnetLIST of BACnetAddressBinding | stack | no |
@@ -252,7 +268,7 @@ Every object this example creates, and every REQUIRED property of each (per ANSI
 | State_Text *(optional, enabled)* | BACnetARRAY[N] of CharacterString | app | no |
 | Property_List | BACnetARRAY[N] of BACnetPropertyIdentifier | stack | no |
 
-### Access Door 1 "Cobalt" - DS-ACUC-B (canonical: B-ACDC). commandable BACnetDoorValue (lock/unlock); 16-slot Priority_Array, Relinquish_Default lock(0); Door_Status/Lock_Status/Secured_Status derived from the effective Present_Value. WriteProperty-verified on the wire: unlock -> Present_Value=unlock, Lock_Status=unlocked. Also SCHED-I-B's write target (Saffron)
+### Access Door 1 "Cobalt" - door command (canonical: B-ACDC). commandable BACnetDoorValue (lock/unlock); 16-slot Priority_Array, Relinquish_Default lock(0); Door_Status/Lock_Status/Secured_Status derived from the effective Present_Value. WriteProperty-verified on the wire: unlock -> Present_Value=unlock, Lock_Status=unlocked. Also SCHED-I-B's write target (Saffron)
 
 | Property | Datatype | Served by | Writable |
 |---|---|---|:---:|
@@ -285,7 +301,7 @@ Every object this example creates, and every REQUIRED property of each (per ANSI
 | Reliability | BACnetReliability | app | no |
 | Out_Of_Service | Boolean | app | no |
 
-### Access Point 1 "Copper" - AE-AC-B / DS-ACSC-B. VERIFIED GAP (TODO.md #1, chipkin/cas-bacnet-stack#2044): SetIntrinsicAccessEventAlgorithm/SetAccessEventContext are test-tool-only, AND the generic SetIntrinsicChangeOfStateAlgorithmUnsigned substitute rejects objectType=accessPoint - confirmed by calling it. So no intrinsic engine is armed here and no notification is produced; Access_Event is a plain read/write property only. VERIFIED GAP (TODO.md #2/#4, chipkin/cas-bacnet-stack#2046): Access_Event_Time/Access_Event_Credential have no servable path (BACnetTimeStamp/BACnetDeviceObjectReference, no typed callback); a live WriteProperty to Access_Event currently answers Error(unknown-object) rather than reaching this file's callback - root cause not found in the time available. Authorization_Mode write (DS-ACSC-B supervisory command) verified accepted at start-up (authorize/denyAll)
+### Access Point 1 "Copper" - AE-AC-B NOT claimed (TODO.md, chipkin/cas-bacnet-stack#2044): the intrinsic access-event algorithm is test-tool-only, AND the generic SetIntrinsicChangeOfStateAlgorithmUnsigned substitute rejects objectType=accessPoint - confirmed by calling it. So no intrinsic engine is armed here and no notification is produced; Access_Event is a plain read/write property only (WriteProperty accepted and read back at 6.x @ 64b2cfac5 - stack #2151 fixed). STACK GAP (chipkin/cas-bacnet-stack#2150): Access_Doors answers Error unknown-property and Access_Event_Credential answers Abort(other) - read by the discovery Wire Test at 64b2cfac5. Authorization_Mode is writable (authorize/denyAll) and stored; nothing reads it
 
 | Property | Datatype | Served by | Writable |
 |---|---|---|:---:|
@@ -305,7 +321,7 @@ Every object this example creates, and every REQUIRED property of each (per ANSI
 | Access_Event_Time | BACnetTimeStamp | stack default, accepted (None known - a read fails with `unknown-property` or an empt) | no |
 | Access_Event_Credential | BACnetDeviceObjectReference | stack default, accepted (None known - a read fails with `unknown-property` or an empt) | no |
 
-### Access Zone 1 "Ebony" - Occupancy_State (normal) wire-verified. VERIFIED GAP (TODO.md #2, chipkin/cas-bacnet-stack#2046): Entry_Points/Exit_Points (required BACnetLIST of BACnetDeviceObjectReference) have no servable path on the customer surface - same class of gap as Access Credential/Rights below, not individually wire-tested this session
+### Access Zone 1 "Ebony" - Occupancy_State (normal) wire-verified. Every listed property reads as a value at 6.x @ 64b2cfac5 (discovery Wire Test); per stack #2150 Entry_Points/Exit_Points are always an empty list and cannot be filled through the customer interface
 
 | Property | Datatype | Served by | Writable |
 |---|---|---|:---:|
@@ -321,7 +337,7 @@ Every object this example creates, and every REQUIRED property of each (per ANSI
 | Entry_Points | BACnetLIST of BACnetDeviceObjectReference | stack default, accepted (None known - a read fails with `unknown-property` or an empt) | no |
 | Exit_Points | BACnetLIST of BACnetDeviceObjectReference | stack default, accepted (None known - a read fails with `unknown-property` or an empt) | no |
 
-### Access Credential 1 "Coral" - Credential_Status (active) wire-verified. VERIFIED GAP (TODO.md #2, chipkin/cas-bacnet-stack#2046): Authentication_Factors (required BACnetARRAY of BACnetCredentialAuthenticationFactor) answers Abort(other) on live ReadProperty - confirmed on the wire, not assumed. Activation_Time/Expiration_Time (BACnetDateTime) and Assigned_Access_Rights (BACnetARRAY of BACnetAssignedAccessRights) share the same no-typed-callback gap, not individually wire-tested
+### Access Credential 1 "Coral" - Credential_Status (active) wire-verified. STACK GAP (chipkin/cas-bacnet-stack#2150): Authentication_Factors (required BACnetARRAY of BACnetCredentialAuthenticationFactor) and Assigned_Access_Rights (required BACnetARRAY of BACnetAssignedAccessRights) answer Error unknown-property - read by the discovery Wire Test at 6.x @ 64b2cfac5 (Authentication_Factors answered Abort(other) at 6.0.21)
 
 | Property | Datatype | Served by | Writable |
 |---|---|---|:---:|
@@ -340,7 +356,7 @@ Every object this example creates, and every REQUIRED property of each (per ANSI
 | Assigned_Access_Rights | BACnetARRAY[N] of BACnetAssignedAccessRights | stack default, accepted (None known - a read fails with `unknown-property` or an empt) | no |
 | Property_List | BACnetARRAY[N] of BACnetPropertyIdentifier | stack | no |
 
-### Access Rights 1 "Cyan" - Enable (true) wire-verified. VERIFIED GAP (TODO.md #2, chipkin/cas-bacnet-stack#2046): Negative_Access_Rules answers Abort(other) on live ReadProperty (required BACnetARRAY of BACnetAccessRule, no typed callback); Positive_Access_Rules shares the same gap
+### Access Rights 1 "Cyan" - Enable (true) wire-verified. STACK GAP (chipkin/cas-bacnet-stack#2150): Positive_Access_Rules and Negative_Access_Rules (required BACnetARRAY of BACnetAccessRule, no typed callback) answer Error unknown-property - read by the discovery Wire Test at 6.x @ 64b2cfac5 (Negative_Access_Rules answered Abort(other) at 6.0.21)
 
 | Property | Datatype | Served by | Writable |
 |---|---|---|:---:|
@@ -354,7 +370,7 @@ Every object this example creates, and every REQUIRED property of each (per ANSI
 | Negative_Access_Rules | BACnetARRAY[N] of BACnetAccessRule | stack default, accepted (None known - a read fails with `unknown-property` or an empt) | no |
 | Positive_Access_Rules | BACnetARRAY[N] of BACnetAccessRule | stack default, accepted (None known - a read fails with `unknown-property` or an empt) | no |
 
-### Event Log 1 "Beige" - AE-EL-I-B. Added with BACnetStack_AddEventLogObject; Property_List/Status_Flags are stack-generated (accepted here only because the generic table does not credit AddEventLogObject's own storage), Event_State/Enable are the object's stack-held defaults (Enable left off - this example generates no notifications for it to capture, per TODO.md #1). Record_Count=0 wire-verified. VERIFIED DEFECT (TODO.md #3, chipkin/cas-bacnet-stack#2045): adding this object alone causes a continuous, non-fatal 'Failed to set the date/time' internal log flood from Tick 1 - isolated by bisection, independent of every other object in this file
+### Event Log 1 "Beige" - AE-EL-I-B NOT claimed (a B-AACC BIBB, and nothing is logged). Added with BACnetStack_AddEventLogObject; Property_List/Status_Flags are stack-generated (accepted here only because the generic table does not credit AddEventLogObject's own storage), Event_State/Enable are the object's stack-held defaults (Enable left off - this example generates no notifications for it to capture, per TODO.md #1). Record_Count=0 wire-verified. Log_Buffer answers ReadProperty with read-access-denied, as cl. 12.27.13 requires (ReadRange only). The 'Failed to set the date/time' log flood this object caused at 6.0.21 (chipkin/cas-bacnet-stack#2045) is gone at 6.x @ 64b2cfac5
 
 | Property | Datatype | Served by | Writable |
 |---|---|---|:---:|
@@ -383,7 +399,7 @@ Every object this example creates, and every REQUIRED property of each (per ANSI
 | Out_Of_Service | Boolean | app | no |
 | Property_List | BACnetARRAY[N] of BACnetPropertyIdentifier | stack | no |
 
-### Calendar 1 "Cream" - Same inherited gap B-AAC's file header documents against stack issue #963: no customer-facing way to populate Date_List. Saffron's one exception uses the inline calendar-Date form instead of a Cream reference, so this gap does not affect Saffron's own behaviour
+### Calendar 1 "Cream" - Added with the generic BACnetStack_AddObject, so Date_List is empty. Stack issue #963 is closed and the stack's Calendar engine is on the customer interface at 6.x @ 64b2cfac5 (AddCalendarObject, AddCalendarDateEntry, AddScheduleExceptionEventWithCalendarReference); moving Cream to it is example work not yet done. Saffron's one exception uses the inline calendar-Date form instead of a Cream reference, so this does not affect Saffron's own behaviour
 
 | Property | Datatype | Served by | Writable |
 |---|---|---|:---:|
@@ -394,7 +410,7 @@ Every object this example creates, and every REQUIRED property of each (per ANSI
 | Date_List | BACnetLIST of BACnetCalendarEntry | stack default, accepted (None known - a read fails with `unknown-property` or an empt) | no |
 | Property_List | BACnetARRAY[N] of BACnetPropertyIdentifier | stack | no |
 
-### File 1 "Ivory" - DM-BR-B backup/restore payload carrier - stream access, in-memory 4KB buffer via BACnetStack_RegisterCallbackReadFile/WriteFile. File_Type/File_Size/Modification_Date/Archive/Read_Only all have NO stack default per property-profile-reference.md and are all served here. File_Size=0 wire-verified. VERIFIED GAP (TODO.md #5, chipkin/cas-bacnet-stack#2046): a live AtomicReadFile against this object aborted (Abort(other)) during an active backup session - not root-caused in the time available. Backup_And_Restore_State transitions wire-verified: idle -> performing-abackup (ReinitializeDevice startBackup accepted) -> idle (endBackup accepted)
+### File 1 "Ivory" - DM-BR-B backup/restore payload carrier - stream access, in-memory 4KB buffer via BACnetStack_RegisterCallbackReadFile/WriteFile. File_Type/File_Size/Modification_Date/Archive/Read_Only all have NO stack default per property-profile-reference.md and are all served here. File_Size=0 wire-verified (stack #2152 fixed). A live AtomicReadFile during an active backup session aborted at 6.0.21; not re-tested at 6.x @ 64b2cfac5. Backup_And_Restore_State transitions wire-verified: idle -> performing-abackup (ReinitializeDevice startBackup accepted) -> idle (endBackup accepted)
 
 | Property | Datatype | Served by | Writable |
 |---|---|---|:---:|

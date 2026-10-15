@@ -76,7 +76,7 @@ Interactive keys while running: `h` help, `q` quit, up/down nudge Analog Input 1
 
 - Device is named "Chipkin Example B-ACC"; objects use the series' colour names; vendor id 389.
 - Implement the B-ACC services the stack supports; expose **every required
-  property** of each object for Protocol_Revision 24. Anything B-ACC requires
+  property** of each object for Protocol_Revision 30. Anything B-ACC requires
   that is NOT implemented must be listed in [TODO.md](TODO.md) and the README.
 - **Every access-family object uses the SAME generic pattern as every other
   object in this series** - `BACnetStack_AddObject` + this file's own Get/Set
@@ -88,6 +88,8 @@ Interactive keys while running: `h` help, `q` quit, up/down nudge Analog Input 1
   `CASBACnetStackDLL.h`. Re-verify this with a fresh
   `grep -n "DllExport.*Access" source/CASBACnetStackDLL.h` before assuming it
   has changed.
+- **This is a Blocked Example (stack #2150, #2044)** - see TODO.md. Do not
+  claim DS-ACUC-B, DS-ACSC-B or AE-AC-B until those close.
 - **AE-AC-B has no working alarm-generation path at the pinned commit.**
   `SetIntrinsicAccessEventAlgorithm`/`SetAccessEventContext` are test-tool-only
   (`CASBACnetStackDLL.h`'s own "Sprint 75...PR #169" comment), and the generic
@@ -95,11 +97,6 @@ Interactive keys while running: `h` help, `q` quit, up/down nudge Analog Input 1
   `objectType=accessPoint` - confirmed by calling it against a running binary.
   Do not re-attempt either without first re-checking whether the stack has
   changed; see TODO.md #1 and the filed issue.
-- **`BACnetStack_AddEventLogObject` produces a continuous internal log flood**
-  from the first `Tick()`, independent of every other object in this file -
-  verified by bisection across 7+ rebuilt configurations this session. It is
-  currently believed non-fatal (the device keeps answering requests
-  correctly) but was not exhaustively characterised. See TODO.md #3.
 - DS-COV-B: `BACnetStack_SetPropertySubscribable` on the property, plus
   `SetCOVSettings`/`SetMaxActiveCOVSubscriptions`; `BACnetStack_UpdateValue`
   also feeds COV subscribers.
@@ -121,15 +118,17 @@ Interactive keys while running: `h` help, `q` quit, up/down nudge Analog Input 1
 
 ## How to verify a change
 
-There are no unit tests; verification is behavioural:
+The Wire Tests in `tests/` automate the discovery half of this (README "Wire
+Tests"): `python3 tests/run_wire_tests.py --exe build/BACnetExampleBACC`. Run them
+after any change. Beyond them, verification is behavioural:
 
 1. Build, then run one instance on a clear UDP port.
 2. With a BACnet client (e.g. the CAS BACnet Explorer, or `bacpypes3`/`BAC0`),
    send **Who-Is** and confirm **I-Am** from the device instance.
 3. **ReadProperty** every required property of every object and confirm the
-   values; confirm `Protocol_Revision` is 24 and `Object_List` lists all
-   objects. Expect the TODO.md-listed constructed-type properties to Abort.
-4. **DS-ACUC-B**: WriteProperty Cobalt's `Present_Value` to `unlock`(1) at a
+   values; confirm `Protocol_Revision` is 30 and `Object_List` lists all
+   objects. Expect the six TODO.md #2 properties (stack #2150) to fail.
+4. **Door command**: WriteProperty Cobalt's `Present_Value` to `unlock`(1) at a
    priority; confirm `Lock_Status`/`Door_Status` follow; relinquish and
    confirm it falls back to `Relinquish_Default`.
 5. **DM-BR-B**: ReinitializeDevice(startBackup) SimpleACKs;

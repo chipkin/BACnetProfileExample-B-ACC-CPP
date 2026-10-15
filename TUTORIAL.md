@@ -100,21 +100,21 @@ those):
 |---|---|---|
 | Access Door | `Object_Name`, `Reliability`, `Out_Of_Service`, `Relinquish_Default`, `Door_Pulse_Time`, `Door_Extended_Pulse_Time`, `Door_Open_Too_Long_Time` | `Present_Value`/`Priority_Array` are stack-resolved once commandable; `Door_Status`/`Lock_Status`/`Secured_Status` optional, enabled here |
 | Credential Data Input | `Present_Value` (AuthenticationFactor, via `GetPropertyOctetString`), `Object_Name`, `Supported_Formats`, `Update_Time`, `Reliability`, `Out_Of_Service` | Update_Time (not Present_Value) is the COV-subscribable property |
-| Access Point | `Object_Name`, `Reliability`, `Out_Of_Service`, `Authentication_Status`, `Active_Authentication_Policy`, `Number_Of_Authentication_Policies`, `Authorization_Mode`, `Access_Event`, `Access_Event_Tag` | `Access_Event_Time`/`Access_Event_Credential` cannot be served - see TODO.md #2 |
-| Access Zone | `Object_Name`, `Occupancy_State`, `Reliability`, `Out_Of_Service`, `Global_Identifier` | `Entry_Points`/`Exit_Points` cannot be served - see TODO.md #2 |
-| Access Credential | `Object_Name`, `Global_Identifier`, `Reliability`, `Credential_Status`, `Reason_For_Disable`, `Credential_Disable` | `Authentication_Factors`/`Activation_Time`/`Expiration_Time`/`Assigned_Access_Rights` cannot be served - see TODO.md #2 |
-| Access Rights | `Object_Name`, `Global_Identifier`, `Reliability`, `Enable` | `Negative_Access_Rules`/`Positive_Access_Rules` cannot be served - see TODO.md #2 |
-| Event Log | `Object_Name` | Everything else is stack-generated or a stack-held default once `BACnetStack_AddEventLogObject` runs - see TODO.md #3 for its log-flood side effect |
+| Access Point | `Object_Name`, `Reliability`, `Out_Of_Service`, `Authentication_Status`, `Active_Authentication_Policy`, `Number_Of_Authentication_Policies`, `Authorization_Mode`, `Access_Event`, `Access_Event_Tag` | `Access_Doors`/`Access_Event_Credential` cannot be served - see TODO.md #2 (stack #2150) |
+| Access Zone | `Object_Name`, `Occupancy_State`, `Reliability`, `Out_Of_Service`, `Global_Identifier` | `Entry_Points`/`Exit_Points` read as an empty list and cannot be filled (stack #2150) |
+| Access Credential | `Object_Name`, `Global_Identifier`, `Reliability`, `Credential_Status`, `Reason_For_Disable`, `Credential_Disable` | `Authentication_Factors`/`Assigned_Access_Rights` cannot be served - see TODO.md #2 (stack #2150) |
+| Access Rights | `Object_Name`, `Global_Identifier`, `Reliability`, `Enable` | `Negative_Access_Rules`/`Positive_Access_Rules` cannot be served - see TODO.md #2 (stack #2150) |
+| Event Log | `Object_Name` | Everything else is stack-generated or a stack-held default once `BACnetStack_AddEventLogObject` runs. `Log_Buffer` answers ReadProperty with read-access-denied: it is ReadRange-only (cl. 12.27.13) |
 | Schedule | `Object_Name`, `Reliability`, `Out_Of_Service` | Present_Value/Weekly_Schedule/Schedule_Default/etc. are genuinely populated by `BACnetStack_AddScheduleObject`/`AddScheduleWeeklyTimeValue`/`SetScheduleDefault` at start-up, not a `GetProperty*` callback |
-| Calendar | `Object_Name`, `Present_Value` | `Date_List` cannot be populated - see TODO.md #6 |
+| Calendar | `Object_Name`, `Present_Value` | `Date_List` is empty: Cream is a generic object, not the stack's Calendar engine - see TODO.md #3 |
 | File | `Object_Name`, `File_Type`, `File_Size`, `Modification_Date`, `Archive`, `Read_Only` | None of these five have a stack default - forgetting any one is a hard failure, not a silent one |
 | Notification Class | `Object_Name` | `Priority`/`Ack_Required`/`Recipient_List` are genuinely populated by `BACnetStack_AddNotificationClassObject`/`AddRecipientToNotificationClass` at start-up |
 
 ## Who serves what: a representative object
 
 The single most common question when reading this file is "who answers this
-property?" For Access Door 1 (Cobalt), the commandable object at the centre of
-DS-ACUC-B, the whole picture:
+property?" For Access Door 1 (Cobalt), the commandable door, the whole
+picture:
 
 | Property | Served by | How |
 |---|---|---|
@@ -143,31 +143,32 @@ rather than against "it looked fine in the explorer":
    a required property nothing serves - a real defect, not one of the
    already-documented gaps in TODO.md.
 2. Read **every** property listed for **every** object with a BACnet client,
-   and compare the value against the PICS. `"undefined"`, a zero enumeration,
+   and compare the value against the PICS. `tests/run_wire_tests.py` reads them
+   all and fails on any that does not return a value, apart from the
+   `[KNOWN GAP]`s in TODO.md #2 (README "Wire Tests") - keep it passing, then
+   check the values yourself. `"undefined"`, a zero enumeration,
    and a stuck `false`/`0` are the shapes a missed callback takes.
 3. Diff a new object of a type against the existing one of that type. Anything
    that differs and shouldn't is a callback that matched on instance.
-4. **DS-ACUC-B**: WriteProperty Cobalt's `Present_Value` to `unlock`(1) at a
+4. **Door command**: WriteProperty Cobalt's `Present_Value` to `unlock`(1) at a
    priority; confirm `Lock_Status`/`Door_Status` follow; relinquish and
    confirm it falls back to `Relinquish_Default`.
 5. **DM-BR-B**: `ReinitializeDevice(startBackup)` SimpleACKs;
    `Backup_And_Restore_State` reads `performing-abackup`;
    `ReinitializeDevice(endBackup)` SimpleACKs, state returns to `idle`. Repeat
-   for startRestore/AtomicWriteFile/endRestore (not verified working end to
-   end in this example - see TODO.md #5).
+   for startRestore/AtomicWriteFile/endRestore (not re-verified end to end at
+   this pin - see TODO.md #4).
 6. **SCHED-I-B**: confirm Saffron's weekday 08:00 transition (or the
    2026-12-25 exception) actually writes Cobalt at the configured priority
    (12).
 7. **DS-COV-B**: SubscribeCOV to Bronze's `Present_Value` or Flax's
    `Update_Time`; change it and confirm a COV notification arrives.
-8. Confirm the one BIBB this example does **not** deliver stays disclosed: a
-   WriteProperty to Copper's `Access_Event` should still be attempted (per
-   TODO.md #4 it currently fails on the wire before reaching this file's
-   callback), and no ACCESS_EVENT-typed notification should ever appear,
-   because no intrinsic algorithm is armed (TODO.md #1). Do not "fix" this
-   quietly by re-enabling an algorithm setter without re-reading TODO.md #1
-   first - both setters were confirmed absent/rejected against the pinned
-   stack, not skipped out of caution.
+8. Confirm what this example does **not** deliver stays disclosed: a
+   WriteProperty to Copper's `Access_Event` is accepted and reads back, and no
+   ACCESS_EVENT-typed notification ever appears, because no intrinsic
+   algorithm is armed (TODO.md #1). Do not "fix" this quietly by re-enabling an
+   algorithm setter without re-reading TODO.md #1 first - both setters were
+   confirmed absent/rejected against the stack, not skipped out of caution.
 
 ### Keeping the PICS honest
 
@@ -198,11 +199,10 @@ issue). Anything required, not in `app` and not in `accepted`, comes out as a
 | Symptom | Cause / fix |
 |---------|-------------|
 | On start-up the app prints a wall of red `Error:` lines but the device works | **Expected — this is not your bug**, for the same two reasons as every example in this series (the device hearing its own broadcast I-Am, and a one-time BACnet/SC UUID notice) - see below for the *additional* one specific to this profile. |
-| The `Error:` wall never stops - it keeps printing `Failed to set the date` / `Failed to set the time` continuously, for the whole time the device runs | **A real, filed stack defect (TODO.md #3, [cas-bacnet-stack#2045](https://github.com/chipkin/cas-bacnet-stack/issues/2045)), not a build problem or something you broke.** Adding Event Log 1 ("Beige") via `BACnetStack_AddEventLogObject` triggers this from the very first `BACnetStack_Tick()`, independent of every other object in this file - verified by bisection. The device keeps answering Who-Is/ReadProperty correctly despite it. Do not spend time trying to "fix" your own code for this; if it bothers you locally, comment out the `AddEventLogObject` call (and note you have disabled AE-EL-I-B). |
-| Copper's `Access_Event` WriteProperty answers `Error(unknown-object)` | **A real, filed stack defect (TODO.md #4).** `SetPropertyWritable` for this property returns success at start-up, but a live write fails before reaching this file's `SetPropertyEnumerated` callback. Not root-caused. |
+| The `Error:` wall never stops - it keeps printing `Failed to set the date` / `Failed to set the time` continuously | Your stack is older than 6.0.23. That was stack defect [cas-bacnet-stack#2045](https://github.com/chipkin/cas-bacnet-stack/issues/2045), triggered by `BACnetStack_AddEventLogObject`; it is fixed at this example's Stack Pin. |
 | No ACCESS_EVENT notification ever appears, no matter what you write to `Access_Event` | **By design of the substitute, not a bug in this file** (TODO.md #1, [cas-bacnet-stack#2044](https://github.com/chipkin/cas-bacnet-stack/issues/2044)). The dedicated access-event intrinsic algorithm is test-tool-only, and the generic `SetIntrinsicChangeOfStateAlgorithmUnsigned` substitute rejects `objectType=accessPoint`. No intrinsic engine is armed on Copper, so nothing generates a notification. |
-| `ReadProperty` of `Access_Credential,1.Authentication_Factors` (or `Access_Rights,1.Negative_Access_Rules`, or similar constructed-type properties) answers `Abort(other)` | **Expected — TODO.md #2**, [cas-bacnet-stack#2046](https://github.com/chipkin/cas-bacnet-stack/issues/2046). These are `BACnetARRAY`/`BACnetLIST` of a complex constructed type with no typed Get callback and no generic constructed-property callback on the customer surface. |
-| `AtomicReadFile` against Ivory aborts during an active backup session | **TODO.md #5** - not root-caused in the time available. `File_Size` itself reads correctly outside a backup session. |
+| `ReadProperty` of `Access_Credential,1.Authentication_Factors` (or `Assigned_Access_Rights`, `Positive_Access_Rules`, `Negative_Access_Rules`, `Access_Doors`) answers Error unknown-property, or `Access_Event_Credential` answers `Abort(other)` | **Expected — TODO.md #2**, [cas-bacnet-stack#2150](https://github.com/chipkin/cas-bacnet-stack/issues/2150). These are `BACnetARRAY`s of a complex constructed type (or a BACnetDeviceObjectReference) with no typed Get callback on the customer surface. |
+| `AtomicReadFile` against Ivory aborts during an active backup session | Seen at stack 6.0.21; not re-tested at this pin (TODO.md #4). |
 | CMake error: *"CAS BACnet Stack adapter not found under: ..."* | Submodules not initialized. Run `git submodule update --init --recursive` (or pass `-D CAS_STACK_DIR=...`). |
 | `CASBACnetStackDLL.h: No such file or directory` | Same - submodules not checked out. |
 | Windows: *"No CMAKE_CXX_COMPILER could be found"* | Install Visual Studio with the "Desktop development with C++" workload, then re-run from a fresh terminal. |
