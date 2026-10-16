@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`common/` 3.3.0 -> 3.4.0** and **`wiretest/` 0.5.0 -> 0.6.0**, both copied
+  verbatim (`common/` from B-SS-CPP `5d78299`, `wiretest/` from B-LS-CPP). With
+  `common/` 3.4.0 a broadcast the stack addresses to this socket's own address
+  goes to the subnet broadcast instead; `wiretest/` 0.6.0 only adds helpers.
+  `tests/discovery_test.py` now sends its Who-Is a second time, with a visible
+  `[RETRY]` line, if no I-Am comes back in 3 s: Who-Is is unconfirmed and the
+  example's UDP receive can drop a datagram on Windows. Discovery results are
+  unchanged: 23/23 with the 6 known gaps (stack #2150) on Windows
+  and Linux, no `[RETRY]`.
 - **Labelled a Blocked Example.** The B-ACC Profile Function (authentication
   and authorization for physical access, configured through the Access
   Credential and Access Rights objects and reported as access events;
