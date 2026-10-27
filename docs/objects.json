@@ -39,8 +39,8 @@
       "type": "Analog Input",
       "instance": 1,
       "name": "Bronze",
-      "app": ["Present_Value", "Object_Name", "Units", "Out_Of_Service"],
-      "enabled": [],
+      "app": ["Present_Value", "Object_Name", "Units", "Out_Of_Service", "COV_Increment"],
+      "enabled": ["COV_Increment"],
       "writable": [],
       "accepted": ["Event_State"],
       "note": "REAL, degrees Celsius; starts at 21.5. Present_Value is DS-COV-B subscribable; the up/down key feeds subscribers via BACnetStack_UpdateValue"
@@ -171,7 +171,7 @@
       "name": "Crimson",
       "app": ["Object_Name"],
       "enabled": [],
-      "writable": [],
+      "writable": ["Recipient_List"],
       "accepted": ["Priority", "Ack_Required", "Recipient_List"],
       "note": "Genuinely populated by BACnetStack_AddNotificationClassObject/AddRecipientToNotificationClass at start-up (same convention as B-LSC's Crimson); accepted only because the generic table cannot credit that host-configuration API. Currently unused for alarm routing given TODO.md #1's finding (no algorithm can be armed on Copper) - kept in the object model because AddRecipientToNotificationClass/SetAlarmsAndEventsForObjectEnabled were still exercised and returned success"
     },

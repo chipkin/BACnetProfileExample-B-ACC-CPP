@@ -1,7 +1,7 @@
 # TODO - known gaps
 
-Stack Pin: `6.x` @ `64b2cfac5` (6.0.23). Every entry was re-checked at this pin
-on 2026-10-15, on the wire where it can be observed.
+Stack Pin: `6.x` @ `69b6249f` (6.0.23). Items 1 and 2 were re-checked at this pin
+on 2026-10-26 (the rest on 2026-10-15 at `64b2cfac5`), on the wire where it can be observed.
 
 **This is a Blocked Example.** The B-ACC Profile Function (ANSI/ASHRAE
 135-2024 L.6.2: "performs authentication and authorization for physical
@@ -41,7 +41,7 @@ credential belongs in the per-event context).
 **Stack issue:** [chipkin/cas-bacnet-stack#2150](https://github.com/chipkin/cas-bacnet-stack/issues/2150) (open; not promoted; part A of [#2046](https://github.com/chipkin/cas-bacnet-stack/issues/2046)).
 
 The discovery Wire Test reads every property in every object's
-`Property_List`. At this pin six required properties do not read as a value
+`Property_List`. At this pin five required properties do not read as a value
 (Windows and Linux, the same answers):
 
 | Object | Property | Answer |
@@ -49,17 +49,19 @@ The discovery Wire Test reads every property in every object's
 | Access Credential 1 "Coral" | `Assigned_Access_Rights` (256) | Error property / unknown-property |
 | Access Credential 1 "Coral" | `Authentication_Factors` (257) | Error property / unknown-property |
 | Access Point 1 "Copper" | `Access_Doors` (246) | Error property / unknown-property |
-| Access Point 1 "Copper" | `Access_Event_Credential` (249) | Abort, reason other |
 | Access Rights 1 "Cyan" | `Negative_Access_Rules` (288) | Error property / unknown-property |
 | Access Rights 1 "Cyan" | `Positive_Access_Rules` (302) | Error property / unknown-property |
 
-They are BACnetARRAYs of constructed types (and one BACnetDeviceObjectReference)
-with no typed Get callback on the customer interface. They are what says which
+They are BACnetARRAYs of constructed types with no typed Get callback on the customer interface. They are what says which
 credential carries which factors and which rights, and which rules allow whom
 through which point: without them another device cannot read or configure the
 authorization data, which is the B-ACC Profile Function and the substance of
 DS-ACUC-B (K.1.34) and DS-ACSC-B (K.1.36). The Wire Test reports each as a
 `[KNOWN GAP]`; when one starts reading as a value it prints `[GAP CLOSED]`.
+
+At `64b2cfac5` Access Point `Access_Event_Credential` (249) also aborted (reason
+other); at `69b6249f` it reads as "no credential" (an Access Credential reference,
+instance 4194303: stack #4194), so it is no longer in the table.
 
 (#2150's own table, from `b790b97dd`, lists whole-array reads of these as
 VALUE_NOT_INITIALIZED; at `64b2cfac5` they answer UNKNOWN_PROPERTY. Same gap,
@@ -81,3 +83,12 @@ session aborted. Stack #2152 (closed) covered it with the `File_Size` defect;
 `File_Size` now reads as a value. The full startBackup / AtomicReadFile /
 endBackup and startRestore / AtomicWriteFile / endRestore cycle has not been
 re-run at this pin.
+
+## 5. Coverage gaps the test tool still reports
+
+The BTL run reports four FAILs, all stack #2150 (BTL 7.1.1, 9.20.1.7, 9.20.1.9,
+9.20.1.16), plus coverage gaps for DS-ACUC-B / DS-ACSC-B and AE-AC-B. No FAIL has
+an example cause at this release. Two skipped groups need a test-tool trigger and
+are not example gaps (ref: `chipkin/chipkin-bacnet-testing-tool#172`, writable
+REAL points; `chipkin/chipkin-bacnet-testing-tool#355`, DeviceCommunicationControl
+9.24.1.x).

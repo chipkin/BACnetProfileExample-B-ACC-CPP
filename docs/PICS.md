@@ -71,11 +71,12 @@ on stack [#2044](https://github.com/chipkin/cas-bacnet-stack/issues/2044) - see
 
 **DS-ACUC-B and DS-ACSC-B** (K.1.34, K.1.36) mean answering reads and writes
 of the standard properties of the access objects. At the Stack Pin (`6.x` @
-`64b2cfac5`) six required properties cannot be served through the customer
+`69b6249f`) five required properties cannot be served through the customer
 interface: Access Credential `Authentication_Factors` and
 `Assigned_Access_Rights`, Access Rights `Positive_Access_Rules` and
 `Negative_Access_Rules`, and Access Point `Access_Doors` answer Error
-unknown-property, and Access Point `Access_Event_Credential` answers Abort.
+unknown-property. (Access Point `Access_Event_Credential`, which aborted at
+`64b2cfac5`, now reads as "no credential".)
 They are the properties that say who may pass where. **Filed:**
 [chipkin/cas-bacnet-stack#2150](https://github.com/chipkin/cas-bacnet-stack/issues/2150).
 Earlier versions of this document named these two BIBBs "Unlock Command" and
@@ -109,7 +110,7 @@ No other BIBB is supported. In particular this device does not support any
 | ReadPropertyMultiple | no | **yes** |
 | WriteProperty | no | **yes** |
 | WritePropertyMultiple | no | **yes** |
-| SubscribeCOV | no | **yes** |
+| SubscribeCOV | no | **yes**; lifetimes up to 8 hours (28800 s), a longer one is refused (SERVICES / VALUE_OUT_OF_RANGE); up to 32 subscriptions |
 | Who-Is | **yes** (start-up) | **yes** |
 | I-Am | **yes** | **yes** |
 | Who-Has | no | **yes** |
@@ -120,11 +121,13 @@ No other BIBB is supported. In particular this device does not support any
 | UTCTimeSynchronization | no | **yes** |
 | AcknowledgeAlarm | no | **yes** |
 | GetEventInformation | no | **yes** |
+| ConfirmedCOVNotification | **yes** (to a SubscribeCOV subscriber that asked for confirmed notifications) | no |
+| UnconfirmedCOVNotification | **yes** (to a SubscribeCOV subscriber that asked for unconfirmed notifications) | no |
 | ConfirmedEventNotification | enabled, **never actually sent** (TODO.md #1) | no |
 | UnconfirmedEventNotification | enabled, **never actually sent** (TODO.md #1) | no |
 | AtomicReadFile | no | **yes**; a live read during an active backup session aborted at stack 6.0.21, not re-tested at this pin ([TODO.md #4](../TODO.md)) |
 | AtomicWriteFile | no | **yes** |
-| ReadRange | no | **yes** (native to the Event Log object once added; not a separately-gated service) |
+| ReadRange | no | **yes** (Event Log 1's Log_Buffer, which only ReadRange can read) |
 
 An unsolicited I-Am is broadcast to the local subnet at start-up, as well as in
 response to Who-Is.
@@ -151,7 +154,7 @@ No object is dynamically creatable or deletable at run time.
 | Analog Input | 1 | Bronze | - |
 | Binary Input | 1 | Emerald | - |
 | Multi-State Input | 1 | Hot Pink | - |
-| Access Door | 1 | Cobalt | Present_Value (commandable) |
+| Access Door | 1 | Cobalt | Present_Value (commandable: lock, unlock, pulse-unlock for Door_Pulse_Time 3.0 s, extended-pulse-unlock for Door_Extended_Pulse_Time 10.0 s) |
 | Credential Data Input | 1 | Flax | - |
 | Access Point | 1 | Copper | Access_Event, Authorization_Mode (stored only) |
 | Access Zone | 1 | Ebony | Global_Identifier |
@@ -161,7 +164,7 @@ No object is dynamically creatable or deletable at run time.
 | Schedule | 1 | Saffron | - |
 | Calendar | 1 | Cream | - |
 | File | 1 | Ivory | Archive |
-| Notification Class | 1 | Crimson | - |
+| Notification Class | 1 | Crimson | Recipient_List (the stack stores a written list; the seeded entry is the default) |
 | Network Port | 1 | Vermilion | - |
 
 The device instance is configurable at run time with `--deviceID` (BACnet
@@ -237,6 +240,7 @@ Every object this example creates, and every REQUIRED property of each (per ANSI
 | Event_State | BACnetEventState | stack default, accepted (Generic Enumerated default: `0`) | no |
 | Out_Of_Service | Boolean | app | no |
 | Units | BACnetEngineeringUnits | app | no |
+| COV_Increment *(optional, enabled)* | Real | app | no |
 | Property_List | BACnetARRAY[N] of BACnetPropertyIdentifier | stack | no |
 
 ### Binary Input 1 "Emerald" - starts active
@@ -434,7 +438,7 @@ Every object this example creates, and every REQUIRED property of each (per ANSI
 | Object_Type | BACnetObjectType | stack | no |
 | Priority | BACnetARRAY[3] of Unsigned | stack default, accepted (Generic UnsignedInteger default: `0`) | no |
 | Ack_Required | BACnetEventTransitionBits | stack default, accepted (Generic BitString default: empty bitstring (zero bits - NOT ) | no |
-| Recipient_List | BACnetLIST of BACnetDestination | stack default, accepted (None known - a read fails with `unknown-property` or an empt) | no |
+| Recipient_List | BACnetLIST of BACnetDestination | stack default, accepted (None known - a read fails with `unknown-property` or an empt) | **yes** |
 | Property_List | BACnetARRAY[N] of BACnetPropertyIdentifier | stack | no |
 
 ### Network Port 1 "Vermilion" - BACnet/IP; Network_Type and Protocol_Level are set from BACnetStack_AddNetworkPortObject()'s arguments at start-up; Changes_Pending is computed and answered natively by the stack. Reliability has no fault condition this example detects, so it is accepted at the generic default (normal)

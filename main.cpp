@@ -168,6 +168,7 @@
 #include <string.h>
 #include <string> // std::string - g_firmwareRevision, built at runtime; see its own comment below
 #include <time.h>  // time(), localtime_s/localtime_r - the Device's Local_Date / Local_Time
+#include <chrono> // std::chrono::steady_clock - Access Door pulse timers
 
 #if defined(_WIN32)
 #include <windows.h> // Sleep()
@@ -218,12 +219,14 @@ static const char* DEVICE_NAME = "Chipkin Example B-ACC";
 
 // The Device object's Description. Change it to what YOUR device actually is;
 // this string describes this tutorial and its BIBB list, which is only correct
-// for this exact example.
+// for this exact example. Keep it under 255 characters: the stack holds at most
+// STACK_OPTION_MAX_CHARACTER_STRING_SIZE - 1 (255) octets from a callback and
+// refuses a longer value, so the property would read as "".
 static const char* DEVICE_DESCRIPTION =
-    "Chipkin CAS BACnet Stack example - B-ACC (Access Control Controller) profile. "
-    "Blocked Example: does not perform access control (stack #2150, #2044). "
-    "Demonstrates DS-RP/RPM/WP/WPM-B, DS-COV-B, AE-ACK-B, AE-INFO-B, SCHED-I-B, "
-    "DM-BR-B, DM-DCC-B, DM-RD-B, and time synchronisation.";
+    "Chipkin CAS BACnet Stack example - B-ACC (Access Control Controller). "
+    "Blocked Example: no access control (stack #2150, #2044). "
+    "DS-RP/RPM/WP/WPM-B, DS-COV-B, AE-ACK-B, AE-INFO-B, SCHED-I-B, "
+    "DM-BR-B, DM-DCC-B, DM-RD-B, time sync.";
 
 // Device identity strings (read by clients, and used to populate I-Am).
 //   VENDOR_NAME - your company name; it must match VENDOR_IDENTIFIER above.
@@ -329,8 +332,18 @@ static const uint32_t PROPERTY_IDENTIFIER_ARCHIVE = 13;
 static const uint32_t PROPERTY_IDENTIFIER_READ_ONLY = 99;
 
 // -- BACnetDoorValue (Cobalt's Present_Value) --------------------------------
+static const uint32_t AUTHENTICATION_FACTOR_TYPE_SIMPLE_NUMBER32 = 4; // BACnetAuthenticationFactorType
+
 static const uint32_t DOOR_VALUE_LOCK = 0;
 static const uint32_t DOOR_VALUE_UNLOCK = 1;
+static const uint32_t DOOR_VALUE_PULSE_UNLOCK = 2;          // momentary unlock (Door_Pulse_Time)
+static const uint32_t DOOR_VALUE_EXTENDED_PULSE_UNLOCK = 3; // longer momentary unlock (Door_Extended_Pulse_Time)
+
+// Cobalt's door timings, in tenths of seconds (135-2024 cl. 12.26.16 / 12.26.17 /
+// 12.26.18). A pulse is relinquished at its own priority when its time runs out.
+static const uint32_t DOOR_PULSE_TIME_TENTHS = 30;          // 3.0 s
+static const uint32_t DOOR_EXTENDED_PULSE_TIME_TENTHS = 100; // 10.0 s
+static const uint32_t DOOR_OPEN_TOO_LONG_TIME_TENTHS = 30;   // 3.0 s (not monitored: no door contact)
 
 // -- BACnetDoorStatus / BACnetLockStatus / BACnetDoorSecuredStatus (optional,
 //    enabled below so this example demonstrates the full Access Door table). --
@@ -392,14 +405,34 @@ static const uint8_t NC_PRIORITY_TO_FAULT = 50;
 static const uint8_t NC_PRIORITY_TO_NORMAL = 200;
 
 // Recipient addressing - see B-LSC's file header for the broadcast-vs-known-
-// client discussion this is copied from.
+// client discussion this is copied from. This entry is the DEFAULT: Crimson's
+// Recipient_List is also WRITABLE (see main()), so a management station can direct
+// the alarms to its own recipients at run time. Cl. 12.21: a READ-ONLY list would have
+// to be the single unconfirmed local-broadcast entry with Process Identifier 0. A
+// written list lives for the life of the process, like every other value this example
+// holds; a restart brings back this default.
+static const uint32_t PROPERTY_IDENTIFIER_RECIPIENT_LIST = 102;
 static const uint32_t RECIPIENT_PROCESS_IDENTIFIER = 1;
 static const bool RECIPIENT_USE_BROADCAST = true;
 static uint8_t RECIPIENT_IP[4] = { 0, 0, 0, 0 };
 
 // COV settings (DS-COV-B).
+// The longest lifetime a SubscribeCOV may ask for: 8 hours. The BTL Test Plan lists
+// "Supports Lifetimes up to 8 hours in duration" as required for DS-COV-B (135.1
+// 9.10.1.10); a longer lifetime is refused with SERVICES / VALUE_OUT_OF_RANGE.
 static const uint32_t COV_MAX_ACTIVE_SUBSCRIPTIONS = 32;
-static const uint32_t COV_MAX_SUPPORTED_LIFETIME_SECONDS = 3600;
+// Analog Input 1's COV_Increment (cl. 12.2.16): the smallest Present_Value change
+// that sends a COV notification to a SubscribeCOV subscriber. Analog Input 1
+// supports COV reporting, so Table 12-2 footnote 2 REQUIRES this property; the
+// stack leaves it absent unless the application enables it (see main()). 1.0 deg C:
+// each up/down nudge (1.1) notifies. Not writable.
+static const uint32_t PROPERTY_IDENTIFIER_COV_INCREMENT = 22;
+static const float ANALOG_INPUT_COV_INCREMENT = 1.0f;
+// ReadRange (BACnetServicesSupported bit 35, the numbering SetServiceEnabled
+// takes): Event Log 1's Log_Buffer is readable
+// only with ReadRange (135-2024 cl. 12.27.13), so the device executes it.
+static const uint32_t SERVICE_READ_RANGE = 35;
+static const uint32_t COV_MAX_SUPPORTED_LIFETIME_SECONDS = 8 * 60 * 60;
 
 // A WriteProperty to a commandable Present_Value carries a priority 1..16.
 static uint8_t EffectivePriority(uint8_t priority) {
@@ -414,15 +447,55 @@ static uint8_t EffectivePriority(uint8_t priority) {
 static bool g_doorIsSet[16] = { false };
 static double g_doorValue[16] = { 0 };
 static double g_doorRelinquishDefault = DOOR_VALUE_LOCK;
+// When each slot's PULSE_UNLOCK / EXTENDED_PULSE_UNLOCK runs out (0 = no pulse).
+static uint64_t g_doorPulseExpiresAtMs[16] = { 0 };
+
+static uint64_t NowMilliseconds() {
+    return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 
 static void CommandDoorWrite(uint8_t priority, double value) {
     const uint8_t p = EffectivePriority(priority);
+    const uint32_t doorValue = (uint32_t)value;
+    const bool isPulse = (doorValue == DOOR_VALUE_PULSE_UNLOCK || doorValue == DOOR_VALUE_EXTENDED_PULSE_UNLOCK);
+    if (isPulse) {
+        // cl. 12.26.4: a pulse written while a higher priority commands the door
+        // "will be relinquished immediately".
+        for (uint8_t higher = 1; higher < p; ++higher) {
+            if (g_doorIsSet[higher - 1]) {
+                g_doorIsSet[p - 1] = false;
+                g_doorPulseExpiresAtMs[p - 1] = 0;
+                printf("Access Door 1 (Cobalt): pulse @ priority %u relinquished immediately - priority %u commands the door\n",
+                       p, higher);
+                return;
+            }
+        }
+    }
     g_doorIsSet[p - 1] = true;
     g_doorValue[p - 1] = value;
+    g_doorPulseExpiresAtMs[p - 1] = isPulse
+        ? NowMilliseconds() + 100ull * (doorValue == DOOR_VALUE_PULSE_UNLOCK ? DOOR_PULSE_TIME_TENTHS
+                                                                            : DOOR_EXTENDED_PULSE_TIME_TENTHS)
+        : 0;
 }
 static void CommandDoorRelinquish(uint8_t priority) {
     const uint8_t p = EffectivePriority(priority);
     g_doorIsSet[p - 1] = false;
+    g_doorPulseExpiresAtMs[p - 1] = 0;
+}
+// Called every tick: relinquish each pulse whose time has run out, at the
+// priority that established it (cl. 12.26.16 / 12.26.17).
+static void DoorPulseTick() {
+    const uint64_t now = NowMilliseconds();
+    for (uint8_t p = 1; p <= 16; ++p) {
+        if (g_doorPulseExpiresAtMs[p - 1] != 0 && now >= g_doorPulseExpiresAtMs[p - 1]) {
+            g_doorIsSet[p - 1] = false;
+            g_doorPulseExpiresAtMs[p - 1] = 0;
+            BACnetStack_UpdateValue(g_deviceInstance, OBJECT_TYPE_ACCESS_DOOR, 1, PROPERTY_IDENTIFIER_PRESENT_VALUE);
+            printf("Access Door 1 (Cobalt): pulse @ priority %u expired - relinquished\n", p);
+        }
+    }
 }
 static bool ReadDoorPrioritySlot(uint32_t propertyIdentifier, bool useArrayIndex,
                                  uint32_t propertyArrayIndex, bool* slotIsSet, double* slotValue) {
@@ -463,6 +536,11 @@ bool GetPropertyReal(const uint32_t deviceInstance, const uint16_t objectType,
     if (objectType == OBJECT_TYPE_ANALOG_INPUT && objectInstance == ANALOG_INPUT_INSTANCE &&
         propertyIdentifier == PROPERTY_IDENTIFIER_PRESENT_VALUE) {
         *value = g_analogInput1Value;
+        return true;
+    }
+    if (objectType == OBJECT_TYPE_ANALOG_INPUT && objectInstance == ANALOG_INPUT_INSTANCE &&
+        propertyIdentifier == PROPERTY_IDENTIFIER_COV_INCREMENT) {
+        *value = ANALOG_INPUT_COV_INCREMENT;
         return true;
     }
     return false;
@@ -543,7 +621,7 @@ bool GetPropertyEnumerated(const uint32_t deviceInstance, const uint16_t objectT
                 if (g_doorIsSet[i]) { effective = g_doorValue[i]; anySet = true; break; }
             }
             (void)anySet;
-            *value = ((uint32_t)effective == DOOR_VALUE_UNLOCK) ? LOCK_STATUS_UNLOCKED : LOCK_STATUS_LOCKED;
+            *value = ((uint32_t)effective != DOOR_VALUE_LOCK) ? LOCK_STATUS_UNLOCKED : LOCK_STATUS_LOCKED;
             return true;
         }
         if (propertyIdentifier == PROPERTY_IDENTIFIER_SECURED_STATUS) {
@@ -553,7 +631,7 @@ bool GetPropertyEnumerated(const uint32_t deviceInstance, const uint16_t objectT
                 if (g_doorIsSet[i]) { effective = g_doorValue[i]; anySet = true; break; }
             }
             (void)anySet;
-            *value = ((uint32_t)effective == DOOR_VALUE_UNLOCK) ? DOOR_SECURED_STATUS_UNSECURED : DOOR_SECURED_STATUS_SECURED;
+            *value = ((uint32_t)effective != DOOR_VALUE_LOCK) ? DOOR_SECURED_STATUS_UNSECURED : DOOR_SECURED_STATUS_SECURED;
             return true;
         }
     }
@@ -657,9 +735,9 @@ bool GetPropertyUnsignedInteger(const uint32_t deviceInstance, const uint16_t ob
     }
     // Cobalt's required Door timing properties.
     if (objectType == OBJECT_TYPE_ACCESS_DOOR && objectInstance == 1) {
-        if (propertyIdentifier == PROPERTY_IDENTIFIER_DOOR_PULSE_TIME) { *value = 5; return true; }
-        if (propertyIdentifier == PROPERTY_IDENTIFIER_DOOR_EXTENDED_PULSE_TIME) { *value = 15; return true; }
-        if (propertyIdentifier == PROPERTY_IDENTIFIER_DOOR_OPEN_TOO_LONG_TIME) { *value = 30; return true; }
+        if (propertyIdentifier == PROPERTY_IDENTIFIER_DOOR_PULSE_TIME) { *value = DOOR_PULSE_TIME_TENTHS; return true; }
+        if (propertyIdentifier == PROPERTY_IDENTIFIER_DOOR_EXTENDED_PULSE_TIME) { *value = DOOR_EXTENDED_PULSE_TIME_TENTHS; return true; }
+        if (propertyIdentifier == PROPERTY_IDENTIFIER_DOOR_OPEN_TOO_LONG_TIME) { *value = DOOR_OPEN_TOO_LONG_TIME_TENTHS; return true; }
     }
     // Copper's required Unsigned properties.
     if (objectType == OBJECT_TYPE_ACCESS_POINT && objectInstance == 1) {
@@ -781,8 +859,11 @@ bool GetPropertyOctetString(const uint32_t deviceInstance, const uint16_t object
 static bool ReturnCharacterString(const char* text, char* value, uint32_t* valueElementCount,
                                   const uint32_t maxElementCount, uint8_t* encodingType) {
     uint32_t length = (uint32_t)strlen(text);
-    if (length > maxElementCount) {
-        length = maxElementCount;
+    // The stack offers a buffer of maxElementCount octets but holds at most
+    // maxElementCount - 1: a value of exactly maxElementCount is refused and the
+    // property reads as an empty string.
+    if (maxElementCount > 0 && length >= maxElementCount) {
+        length = maxElementCount - 1;
     }
     memcpy(value, text, length);
     *valueElementCount = length;
@@ -909,7 +990,10 @@ bool GetPropertyAuthenticationFactorFormat(const uint32_t deviceInstance, const 
     if (!useArrayIndex || propertyArrayIndex != 1) {
         return false; // the length (index 0) is GetPropertyUnsignedInteger's; there is one element
     }
-    *formatType = 1; // weigand(1) - matches the demo badge bytes in GetPropertyOctetString above
+    // BACnetAuthenticationFactorType (135-2024 cl. 21): the demo badge in
+    // GetPropertyOctetString above is four octets, a simple-number32 (4).
+    // (1 is ERROR, not a format; wiegand26 would be 8.)
+    *formatType = AUTHENTICATION_FACTOR_TYPE_SIMPLE_NUMBER32;
     *useVendorId = false;
     *vendorId = 0;
     *useVendorFormat = false;
@@ -923,8 +1007,15 @@ bool GetPropertyAuthenticationFactorFormat(const uint32_t deviceInstance, const 
 // engine reads them, so they have to be answered here: real wall-clock local
 // time. (Found by the discovery Wire Test at stack 6.x @ 64b2cfac5: both read
 // as read-access-denied before.)
+//
+// The device's clock is the host's wall clock plus g_clockOffsetSeconds, the
+// correction the last TimeSynchronization or UTCTimeSynchronization applied
+// (SetSystemTime below), so a time sync moves Local_Date / Local_Time and the
+// Schedule with them. A real device would set its RTC instead of keeping an offset.
+static time_t g_clockOffsetSeconds = 0;
+
 static bool GetCurrentLocalTm(struct tm* out) {
-    const time_t nowSeconds = time(NULL);
+    const time_t nowSeconds = time(NULL) + g_clockOffsetSeconds;
 #if defined(_WIN32)
     return localtime_s(out, &nowSeconds) == 0;
 #else
@@ -1035,13 +1126,14 @@ bool SetPropertyEnumerated(const uint32_t deviceInstance, const uint16_t objectT
     // the door command.
     if (objectType == OBJECT_TYPE_ACCESS_DOOR && objectInstance == 1 &&
         propertyIdentifier == PROPERTY_IDENTIFIER_PRESENT_VALUE) {
-        if (value != DOOR_VALUE_LOCK && value != DOOR_VALUE_UNLOCK) {
+        // BACnetDoorValue: lock (0), unlock (1), pulse-unlock (2), extended-pulse-unlock (3).
+        if (value > DOOR_VALUE_EXTENDED_PULSE_UNLOCK) {
             *errorCode = ERROR_CODE_VALUE_OUT_OF_RANGE;
             return false;
         }
+        static const char* const doorValueNames[] = { "lock(0)", "unlock(1)", "pulse-unlock(2)", "extended-pulse-unlock(3)" };
+        printf("WriteProperty: Access Door 1 (Cobalt) <- %s @ priority %u\n", doorValueNames[value], EffectivePriority(priority));
         CommandDoorWrite(priority, (double)value);
-        printf("WriteProperty: Access Door 1 (Cobalt) <- %s @ priority %u\n",
-               value == DOOR_VALUE_UNLOCK ? "unlock(1)" : "lock(0)", EffectivePriority(priority));
         return true;
     }
     // Copper (Access Point 1): WriteProperty(Access_Event, ...) simulates a
@@ -1238,7 +1330,34 @@ bool SetSystemTime(const uint32_t deviceInstance, const uint8_t year, const uint
     if (deviceInstance != g_deviceInstance) {
         return false;
     }
-    printf("SetSystemTime: %04u-%02u-%02u %02u:%02u:%02u\n", 1900u + year, month, day, hour, minute, second);
+    // The stack executes TimeSynchronization and UTCTimeSynchronization (converting
+    // UTC to local time with UTC_Offset first) and calls this one callback. A time
+    // sync names one specific moment; a wildcard (255) field cannot set a clock.
+    const uint8_t UNSPECIFIED = 255;
+    if (year == UNSPECIFIED || month == UNSPECIFIED || day == UNSPECIFIED ||
+        hour == UNSPECIFIED || minute == UNSPECIFIED || second == UNSPECIFIED) {
+        printf("SetSystemTime: ignored - the date or time has an unspecified field\n");
+        return false;
+    }
+    // BACnet dates count years from 1900 (year value 0 == 1900), as struct tm does.
+    struct tm requestedTm;
+    memset(&requestedTm, 0, sizeof(requestedTm));
+    requestedTm.tm_year = year;
+    requestedTm.tm_mon = month - 1;
+    requestedTm.tm_mday = day;
+    requestedTm.tm_hour = hour;
+    requestedTm.tm_min = minute;
+    requestedTm.tm_sec = second;
+    requestedTm.tm_isdst = -1; // let the C library decide whether DST applies
+    const time_t requestedTime = mktime(&requestedTm);
+    if (requestedTime == (time_t)-1) {
+        printf("SetSystemTime: ignored - %04u-%02u-%02u %02u:%02u:%02u is not a valid local time\n",
+               1900u + year, month, day, hour, minute, second);
+        return false;
+    }
+    g_clockOffsetSeconds = requestedTime - time(NULL);
+    printf("SetSystemTime: %04u-%02u-%02u %02u:%02u:%02u (device clock is now %lld s from the host clock)\n",
+           1900u + year, month, day, hour, minute, second, (long long)g_clockOffsetSeconds);
     return true;
 }
 
@@ -1447,6 +1566,7 @@ int main(int argc, char** argv) {
         { SERVICE_UNCONFIRMED_EVENT_NOTIFICATION,"UnconfirmedEventNotification (AE-AC-B)" },
         { SERVICE_ATOMIC_READ_FILE,              "AtomicReadFile (DM-BR-B)" },
         { SERVICE_ATOMIC_WRITE_FILE,             "AtomicWriteFile (DM-BR-B)" },
+        { SERVICE_READ_RANGE,                    "ReadRange (Event Log 1 Log_Buffer, cl. 12.27.13)" },
     };
     for (size_t i = 0; i < sizeof(services) / sizeof(services[0]); ++i) {
         if (!BACnetStack_SetServiceEnabled(g_deviceInstance, services[i].service, true)) {
@@ -1527,6 +1647,12 @@ int main(int argc, char** argv) {
                                         PROPERTY_IDENTIFIER_STATE_TEXT, true)) {
         printf("Error: Failed to enable State_Text on Multi-State Input 1 (Hot Pink).\n"); return 1;
     }
+    // Analog Input 1 (Bronze) supports COV reporting (DS-COV-B), so its COV_Increment
+    // is required (cl. 12.2 footnote 2); GetPropertyReal serves the value.
+    if (!BACnetStack_SetPropertyEnabled(g_deviceInstance, OBJECT_TYPE_ANALOG_INPUT, ANALOG_INPUT_INSTANCE,
+                                        PROPERTY_IDENTIFIER_COV_INCREMENT, true)) {
+        printf("Error: Failed to enable COV_Increment on Analog Input 1 (Bronze).\n"); return 1;
+    }
     if (!BACnetStack_SetPropertyEnabled(g_deviceInstance, OBJECT_TYPE_ACCESS_DOOR, 1,
                                         PROPERTY_IDENTIFIER_DOOR_STATUS, true) ||
         !BACnetStack_SetPropertyEnabled(g_deviceInstance, OBJECT_TYPE_ACCESS_DOOR, 1,
@@ -1588,6 +1714,14 @@ int main(int argc, char** argv) {
                                                       false, true, true, true, false, 0, true, 0,
                                                       recipientMac, sizeof(recipientMac))) {
         printf("Error: could not seed the Notification Class recipient (Crimson).\n"); return 1;
+    }
+    // ... and make Crimson's Recipient_List WRITABLE. The stack decodes and stores a
+    // written BACnetDestination list itself (a stack-held property, so no Set callback
+    // is needed). Cl. 12.21: a read-only list would have to be the single unconfirmed
+    // local-broadcast entry with Process Identifier 0.
+    if (!BACnetStack_SetPropertyWritable(g_deviceInstance, OBJECT_TYPE_NOTIFICATION_CLASS,
+                                         NOTIFICATION_CLASS_INSTANCE, PROPERTY_IDENTIFIER_RECIPIENT_LIST, true)) {
+        printf("Error: could not make Notification Class 1 (Crimson) Recipient_List writable.\n"); return 1;
     }
     if (!BACnetStack_SetAlarmsAndEventsForObjectEnabled(g_deviceInstance, OBJECT_TYPE_ACCESS_POINT, 1,
                                                         NOTIFICATION_CLASS_INSTANCE, NOTIFY_TYPE_ALARM,
@@ -1679,13 +1813,14 @@ int main(int argc, char** argv) {
     bool running = true;
     while (running) {
         BACnetStack_Tick();
+        DoorPulseTick();
 
         CASExampleHelper::RestartKind restartKind;
         if (CASExampleHelper::RestartDue(&restartKind)) {
             if (restartKind == CASExampleHelper::RestartKind::Cold) {
                 printf("Restart: COLDSTART - restoring power-on state.\n");
                 g_analogInput1Value = 21.5f;
-                for (int i = 0; i < 16; ++i) { g_doorIsSet[i] = false; }
+                for (int i = 0; i < 16; ++i) { g_doorIsSet[i] = false; g_doorPulseExpiresAtMs[i] = 0; }
                 g_accessEventValue = ACCESS_EVENT_NONE;
                 g_authorizationMode = AUTHORIZATION_MODE_AUTHORIZE;
             } else {

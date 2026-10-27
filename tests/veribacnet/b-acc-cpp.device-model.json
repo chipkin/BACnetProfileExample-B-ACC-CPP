@@ -1,0 +1,303 @@
+{
+  "bibbs": [
+    {
+      "enabled": true,
+      "id": "DS-RP-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DS-RPM-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DS-WP-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DS-WPM-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DS-COV-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "AE-ACK-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "AE-INFO-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "SCHED-I-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DM-BR-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DM-DDB-A",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DM-DDB-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DM-DOB-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DM-DCC-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DM-TS-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DM-UTC-B",
+      "provenance": "user-entered"
+    },
+    {
+      "enabled": true,
+      "id": "DM-RD-B",
+      "provenance": "user-entered"
+    }
+  ],
+  "epicsHeader": {
+    "characterSetsSupported": {
+      "provenance": "derived",
+      "value": "ISO 10646 (UTF-8) / ANSI X3.4"
+    },
+    "dataLinkOptions": {
+      "provenance": "derived",
+      "value": "BACnet IP, (Annex J)"
+    },
+    "deviceProfile": {
+      "provenance": "user-entered",
+      "value": "B-ACC - BACnet Access Control Controller"
+    },
+    "productDescription": {
+      "provenance": "user-entered",
+      "value": "A BACnet/IP Access Control Controller built on the CAS BACnet Stack. It presents the access family (Access Door, Credential Data Input, Access Point, Access Zone, Access Credential, Access Rights), an Event Log, a Schedule/Calendar pair, a File object for backup/restore, a Notification Class, three read-only sensor objects and the required Network Port. Blocked Example: it makes no grant/deny decision and generates no access event (CAS BACnet Stack #2150, #2044). It is a tutorial for implementers of the B-ACC profile."
+    },
+    "productName": {
+      "provenance": "user-entered",
+      "value": "CAS BACnet Stack Example - B-ACC"
+    },
+    "specialFunctionality": {
+      "provenance": "derived",
+      "value": "none"
+    }
+  },
+  "identityMutations": [
+    {
+      "included": true,
+      "notes": "The Device object is the only object whose identity can change, and only by start-up configuration: restart the example with --deviceID <n>. Object_Name is a source constant (main.cpp DEVICE_NAME). A WriteProperty to the Device's Object_Name or Object_Identifier is refused (write-access-denied), so nothing changes over the network.",
+      "objectIdentifier": {
+        "instance": 389009,
+        "type": "device"
+      },
+      "provenance": "user-entered",
+      "safeAlternateObjectIdentifier": {
+        "instance": 389909,
+        "type": "device"
+      }
+    }
+  ],
+  "infra": {
+    "dccPassword": {
+      "provenance": "user-entered",
+      "value": ""
+    },
+    "failTimes": {
+      "provenance": "derived",
+      "value": [
+        [
+          "Notification Fail Time",
+          60
+        ],
+        [
+          "Internal Processing Fail Time",
+          2
+        ],
+        [
+          "Minimum ON/OFF Time",
+          2
+        ],
+        [
+          "Schedule Evaluation Fail Time",
+          2
+        ],
+        [
+          "External Command Fail Time",
+          5
+        ],
+        [
+          "Program Object State Change Fail Time",
+          5
+        ],
+        [
+          "Acknowledgement Fail Time",
+          2
+        ],
+        [
+          "Slave Proxy Confirm Interval",
+          6
+        ],
+        [
+          "Unconfirmed Response Fail Time",
+          4
+        ],
+        [
+          "Activate Changes Fail Time",
+          30
+        ],
+        [
+          "Auto Negotiation Fail Time",
+          15
+        ],
+        [
+          "Foreign Device Registration Fail Time",
+          10
+        ],
+        [
+          "Channel Write Fail Time",
+          30
+        ]
+      ]
+    },
+    "networkPortInstance": {
+      "provenance": "captured",
+      "value": 1
+    },
+    "rebootWindow": {
+      "provenance": "derived",
+      "value": {
+        "activateChangesMs": 30000,
+        "coldstartMs": 60000,
+        "warmstartMs": 30000
+      }
+    },
+    "reinitializePassword": {
+      "provenance": "user-entered",
+      "value": ""
+    },
+    "timeouts": {
+      "provenance": "derived",
+      "value": {
+        "apdu": 3000,
+        "reply": 1000,
+        "segment": 1000
+      }
+    },
+    "valueRestrictions": {
+      "provenance": "derived",
+      "value": [
+        {
+          "datatype": "unsigned-integer",
+          "kind": "range",
+          "max": 65535,
+          "min": 0
+        },
+        {
+          "datatype": "signed-integer",
+          "kind": "range",
+          "max": 2147483647,
+          "min": -2147483648
+        },
+        {
+          "datatype": "real",
+          "kind": "range",
+          "max": 3.4e+38,
+          "min": -3.4e+38,
+          "resolution": 0.01
+        },
+        {
+          "datatype": "character-string",
+          "kind": "length",
+          "max": 64
+        },
+        {
+          "datatype": "octet-string",
+          "kind": "length",
+          "max": 256
+        },
+        {
+          "datatype": "list",
+          "kind": "length",
+          "max": 10
+        }
+      ]
+    }
+  },
+  "snapshotCapturedAt": "2026-10-26T11:34:34.374Z",
+  "testPoints": [
+    {
+      "included": true,
+      "kind": "commandable",
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "accessDoor"
+      },
+      "propertyIdentifier": "presentValue",
+      "provenance": "user-entered",
+      "suggestedTestValue": 1,
+      "writePriority": 16
+    },
+    {
+      "included": true,
+      "kind": "writable",
+      "notes": "BACnetAuthorizationMode; the example accepts authorize (0) and deny-all (2) and refuses the rest with VALUE_OUT_OF_RANGE. Stored only.",
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "accessPoint"
+      },
+      "propertyIdentifier": "authorizationMode",
+      "provenance": "user-entered",
+      "suggestedTestValue": 2
+    },
+    {
+      "included": true,
+      "kind": "writable",
+      "notes": "Unsigned32; stored only.",
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "accessCredential"
+      },
+      "propertyIdentifier": "globalIdentifier",
+      "provenance": "user-entered",
+      "suggestedTestValue": 1234
+    },
+    {
+      "included": true,
+      "kind": "writable",
+      "notes": "BOOLEAN; stored only.",
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "file"
+      },
+      "propertyIdentifier": "archive",
+      "provenance": "user-entered",
+      "suggestedTestValue": true
+    }
+  ],
+  "updatedAt": "2026-10-26T11:34:34.374Z"
+}

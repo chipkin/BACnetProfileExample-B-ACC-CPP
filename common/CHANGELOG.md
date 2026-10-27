@@ -12,6 +12,26 @@ entry here, and must then be re-copied into **every** example in the series.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the folder adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-10-21
+
+### Fixed
+
+- **`SimpleUDP::Receive` no longer loses datagrams on Windows.** Up to 3.4.0
+  `SimpleUDP::Connect` set a 10 ms `SO_RCVTIMEO` and `Receive` called a
+  blocking `recvfrom` every tick. On Windows a datagram that arrives just as
+  that timed receive expires is silently discarded: the example never logs
+  `RX` for it and the next receive does not return it either. The loss is
+  worst with sparse traffic - exactly how a test client or a BACnet
+  workstation paces its requests - and was measured on
+  `BACnetProfileExample-B-SS-CPP` at 127.0.0.1 (one ReadProperty at a time,
+  0.3-1.2 s apart, 400 requests per run): 0, 1 and 30 lost in three runs
+  before (the example logged `RX` 400, 399 and 370 times), 0 lost in each of
+  three runs after. `Connect` no
+  longer sets `SO_RCVTIMEO`; `Receive` waits up to 10 ms with `select()` and
+  calls `recvfrom` only when the socket is readable (with `MSG_DONTWAIT` on
+  POSIX, so it can never block). Same on Windows, Linux and macOS. The interface,
+  the return values and the ~10 ms idle wait per call are unchanged.
+
 ## [3.4.0] - 2026-10-15
 
 ### Fixed

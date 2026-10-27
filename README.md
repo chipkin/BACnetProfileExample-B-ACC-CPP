@@ -12,8 +12,8 @@
 >   the properties that carry the authorization data cannot be served: an
 >   Access Credential's `Authentication_Factors` and `Assigned_Access_Rights`,
 >   an Access Rights object's `Positive_Access_Rules` and
->   `Negative_Access_Rules`, an Access Point's `Access_Doors` (each answers
->   Error unknown-property) and `Access_Event_Credential` (Abort). So another
+>   `Negative_Access_Rules`, and an Access Point's `Access_Doors` (each answers
+>   Error unknown-property). So another
 >   device cannot read or configure who may pass where, and DS-ACUC-B and
 >   DS-ACSC-B cannot be claimed.
 > - **[cas-bacnet-stack#2044](https://github.com/chipkin/cas-bacnet-stack/issues/2044)** -
@@ -47,8 +47,8 @@ reasoning and every verified stack limitation this profile ran into.
   Statement: every object, every property, and who answers it.
 
 > **Versions:** this document describes **example v1.1.0**, built and verified
-> against **CAS BACnet Stack 6.0.23** (`6.x` @ `64b2cfac5`), at
-> **Protocol_Revision 30**, with the vendored `common/` helper at **v3.4.0**.
+> against **CAS BACnet Stack 6.0.23** (`6.x` @ `69b6249f`), at
+> **Protocol_Revision 30**, with the vendored `common/` helper at **v3.4.1**.
 > Running the example prints all three - if what it prints disagrees with this
 > line, trust the program and check `CHANGELOG.md`.
 
@@ -68,7 +68,7 @@ and [docs/PICS.md](docs/PICS.md) give the per-BIBB and per-property picture.
 | Object | Name | Notes |
 |---|---|---|
 | Device 389009 | Chipkin Example B-ACC | `--deviceID` overrides |
-| Analog Input 1 | Bronze | REAL, degrees Celsius; read-only; COV-subscribable |
+| Analog Input 1 | Bronze | REAL, degrees Celsius; read-only; COV-subscribable, COV_Increment 1.0 |
 | Binary Input 1 | Emerald | active/inactive; read-only |
 | Multi-State Input 1 | Hot Pink | state 1..3; read-only |
 | Access Door 1 | Cobalt | BACnetDoorValue; commandable (lock/unlock); SCHED-I-B target |
@@ -123,11 +123,11 @@ See `TODO.md` for the full, wire-verified list with filed stack issues. Summary:
    test-tool interface only, and the generic change-of-state algorithm
    rejects an Access Point.
    [chipkin/cas-bacnet-stack#2044](https://github.com/chipkin/cas-bacnet-stack/issues/2044)
-3. **Six required constructed-type properties cannot be served**:
+3. **Five required constructed-type properties cannot be served**:
    `Authentication_Factors`, `Assigned_Access_Rights`, `Positive_Access_Rules`,
-   `Negative_Access_Rules`, `Access_Doors` (Error unknown-property) and
-   `Access_Event_Credential` (Abort), read on the wire by the Wire Test at
-   `64b2cfac5`.
+   `Negative_Access_Rules` and `Access_Doors` (Error unknown-property), read on
+   the wire by the Wire Test at `69b6249f`. (`Access_Event_Credential`, which
+   aborted at `64b2cfac5`, now reads as "no credential".)
    [chipkin/cas-bacnet-stack#2150](https://github.com/chipkin/cas-bacnet-stack/issues/2150)
 4. Cream (Calendar 1) is added with the generic `BACnetStack_AddObject`, so its
    `Date_List` is empty and Saffron uses an inline exception date. The stack's
@@ -236,7 +236,7 @@ collide with another instance on the same host; the default is 47808):
 ```
 BACnet Access Control Controller (B-ACC) Example - C++ v1.1.0
 CAS BACnet Stack version: 6.0.23.0
-Common helper (common/) version: 3.4.0
+Common helper (common/) version: 3.4.1
 FYI: Listening for BACnet/IP on UDP port 47821 (Network Port 1).
 TX 21 bytes to 192.168.3.255:47821 (broadcast) (Network Port 1) - Unconfirmed: I-Am
 TX 8 bytes to 192.168.3.255:47821 (broadcast) (Network Port 1) - Unconfirmed: Who-Is
@@ -303,7 +303,7 @@ Verified live with a real BACnet client ([CAS BACnet Explorer](https://store.chi
   credential-read - ACCESS_EVENT notification (blocked by TODO.md #1); the
   constructed-type properties in TODO.md #2.
 
-That list is from v1.0.0 at stack 6.0.21. At `64b2cfac5` the Wire Test below
+That list is from v1.0.0 at stack 6.0.21. At `69b6249f` the Wire Test below
 re-read every listed property of every object.
 
 For a property-by-property review against the conformance statement, see
@@ -315,7 +315,7 @@ A Python BACnet client drives the running example over BACnet/IP from outside
 it, the way a client discovers a device - Who-Is, the Device's `Object_List`,
 then for every object its `Property_List` and a ReadProperty of every property
 it lists. Every read must come back as a value, except the Event Log's
-`Log_Buffer`, which the standard makes ReadRange-only. The six properties stack
+`Log_Buffer`, which the standard makes ReadRange-only. The five properties stack
 #2150 cannot serve are reported as `[KNOWN GAP]` lines and do not fail the run.
 Python 3 standard library only:
 

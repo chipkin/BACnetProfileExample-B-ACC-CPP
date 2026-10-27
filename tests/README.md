@@ -57,6 +57,16 @@ explained below.
    **`FD_Subscription_Lifetime` (419)** are each listed and read as a value -
    the three reads Chipkin BACnet Explorer found failing at stack 6.0.21
    (reported against B-SS-CPP as #20, #21, #22).
+5. **SubscribeCOV** on Analog Input 1 with an 8-hour lifetime (28800 s) gets a
+   SimpleACK (the BTL Test Plan requires 8-hour lifetimes for DS-COV-B, 135.1
+   9.10.1.10); one second more gets an Error; the cancellation (no lifetime) gets
+   a SimpleACK.
+6. **Access Door 1 pulse**: Present_Value PULSE_UNLOCK at priority 8 gets a
+   SimpleACK; during the pulse Present_Value reads PULSE_UNLOCK and Lock_Status
+   unlocked; after Door_Pulse_Time (3.0 s) Present_Value reads LOCK again
+   (135-2024 cl. 12.26.4, 12.26.16).
+7. **Analog Input 1 `COV_Increment` (22)** is listed in `Property_List` and reads
+   1.0 (required where COV reporting is supported: cl. 12.2.16, Table 12-2 footnote 2).
 
 Additions to the B-SS test:
 
@@ -66,12 +76,25 @@ Additions to the B-SS test:
   use of the ReadRange service" (cl. 12.27.13), and cl. 15.5.1.3.1 answers "The
   property is not accessible using this service" with PROPERTY /
   READ_ACCESS_DENIED. A value would fail it too.
-- **Six properties are `[KNOWN GAP]`s** (stack #2150, TODO.md #2): Access
+- **Five properties are `[KNOWN GAP]`s** (stack #2150, TODO.md #2): Access
   Credential `Assigned_Access_Rights` and `Authentication_Factors`, Access
-  Point `Access_Doors` and `Access_Event_Credential`, Access Rights
+  Point `Access_Doors`, Access Rights
   `Negative_Access_Rules` and `Positive_Access_Rules`. Each is read and
   reported on every run without failing it; when one reads as a value the run
-  prints `[GAP CLOSED]`.
+  prints `[GAP CLOSED]`. Access Point `Access_Event_Credential` was a sixth
+  until stack `6.x` @ `69b6249f`, where it reads as "no credential" (an Access
+  Credential reference with instance 4194303); it is now an ordinary checked read.
+
+## `recipient_list_test.py` - Notification Class 1's Recipient_List is writable
+
+Copied from B-AACC-CPP. 1. The default list (the entry `main.cpp` seeds) reads
+back as one BACnetDestination. 2. A WriteProperty of a two-entry list (Device
+389110, Process Identifier 2, confirmed; Device 389111, Process Identifier 3,
+unconfirmed, to-offnormal only) is SimpleACKed and reads back unchanged.
+3. Writing the default back is SimpleACKed and reads back unchanged. On a binary
+where the list is read-only, both writes answer Error PROPERTY /
+WRITE_ACCESS_DENIED. Delivery is not tested: this example generates no event
+notification (TODO.md #1).
 
 ## It fails without the fix
 
@@ -115,3 +138,7 @@ Run 2026-10-15, stack `6.x` @ `64b2cfac5` (6.0.23), the committed `main.cpp`:
 |---|---|---|
 | Windows | STATIC (msbuild `ReleaseLib|x64`, VS 18) | 23/23 - PASS, 238 reads, 6 known gaps |
 | Linux (WSL Ubuntu 22.04) | STATIC (`projects/linux` makefile) | 23/23 - PASS, 238 reads, 6 known gaps |
+
+Run 2026-10-26, stack `6.x` @ `69b6249f` (6.0.23), Windows, CMake build (VS 18):
+26/26 - PASS, 5 known gaps (`Access_Event_Credential` now reads as a value), with
+the three SubscribeCOV checks.

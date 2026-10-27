@@ -1,0 +1,638 @@
+{
+  "capabilities": {
+    "maxApduLength": 1476,
+    "maxSegmentsAccepted": 16,
+    "objectTypesSupported": [
+      "analogInput",
+      "binaryInput",
+      "calendar",
+      "device",
+      "file",
+      "multiStateInput",
+      "notificationClass",
+      "schedule",
+      "eventLog",
+      "accessDoor",
+      "accessCredential",
+      "accessPoint",
+      "accessRights",
+      "accessZone",
+      "credentialDataInput",
+      "networkPort"
+    ],
+    "segmentation": "both",
+    "servicesExecuted": [
+      "readProperty",
+      "readPropertyMultiple",
+      "writeProperty",
+      "writePropertyMultiple",
+      "subscribeCov",
+      "whoIs",
+      "iAm",
+      "whoHas",
+      "deviceCommunicationControl",
+      "reinitializeDevice",
+      "timeSynchronization",
+      "utcTimeSynchronization",
+      "acknowledgeAlarm",
+      "getEventInformation",
+      "atomicReadFile",
+      "atomicWriteFile",
+      "readRange",
+      "readRange"
+    ],
+    "servicesSupported": [
+      "acknowledgeAlarm",
+      "confirmedEventNotification",
+      "subscribeCov",
+      "atomicReadFile",
+      "atomicWriteFile",
+      "readProperty",
+      "readPropertyMultiple",
+      "writeProperty",
+      "writePropertyMultiple",
+      "deviceCommunicationControl",
+      "reinitializeDevice",
+      "iAm",
+      "iHave",
+      "unconfirmedEventNotification",
+      "timeSynchronization",
+      "whoHas",
+      "whoIs",
+      "readRange",
+      "utcTimeSynchronization",
+      "getEventInformation",
+      "confirmedCovNotification",
+      "unconfirmedCovNotification"
+    ]
+  },
+  "conflicts": [],
+  "declared": {
+    "bibbs": [
+      "DS-RP-B",
+      "DS-RPM-B",
+      "DS-WP-B",
+      "DS-WPM-B",
+      "DS-COV-B",
+      "AE-ACK-B",
+      "AE-INFO-B",
+      "SCHED-I-B",
+      "DM-BR-B",
+      "DM-DDB-A",
+      "DM-DDB-B",
+      "DM-DOB-B",
+      "DM-DCC-B",
+      "DM-TS-B",
+      "DM-UTC-B",
+      "DM-RD-B"
+    ],
+    "options": {
+      "4.10::Supports COV for Analog Input objects": "Analog Input 1 Present_Value is COV-subscribable (main.cpp SetPropertySubscribable).",
+      "4.10::Supports COV for Credential Data Input objects": "Credential Data Input 1 Update_Time is COV-subscribable (main.cpp SetPropertySubscribable).",
+      "4.6::Contains commandable properties": "Access Door 1 Present_Value is commandable (16-slot Priority_Array, Relinquish_Default lock; main.cpp SetPropertyEnumerated / SetPropertyNull).",
+      "4.6::Contains writable BOOLEAN properties": "File 1 Archive (BOOLEAN) is writable (main.cpp SetPropertyBool).",
+      "4.6::Contains writable Enumerated properties": "Access Door 1 Present_Value (BACnetDoorValue), Access Point 1 Access_Event and Authorization_Mode are writable (main.cpp SetPropertyEnumerated).",
+      "4.6::Contains writable Unsigned properties": "Access Credential 1, Access Rights 1 and Access Zone 1 Global_Identifier (Unsigned32) are writable (main.cpp SetPropertyUnsignedInteger).",
+      "4.6::Contains writable non-array properties": "Access Door 1 Present_Value, Access Point 1 Access_Event / Authorization_Mode, Global_Identifier on Access Credential 1 / Access Rights 1 / Access Zone 1, and File 1 Archive are writable non-array properties (main.cpp SetPropertyWritable calls).",
+      "4.8::Contains multiple objects with writable properties": "Access Door 1, Access Point 1, Access Credential 1, Access Rights 1, Access Zone 1 and File 1 each have writable properties (main.cpp SetPropertyWritable calls).",
+      "4.8::Contains objects with multiple writable properties": "Access Point 1 has two writable properties, Access_Event and Authorization_Mode.",
+      "4.8::Contains writable BOOLEAN properties": "File 1 Archive.",
+      "4.8::Contains writable Enumerated properties": "Access Door 1 Present_Value, Access Point 1 Access_Event and Authorization_Mode.",
+      "4.8::Contains writable Unsigned properties": "Global_Identifier on Access Credential 1, Access Rights 1 and Access Zone 1.",
+      "6.4::Is able to schedule Enumerated values": "Schedule 1 writes Access Door 1 Present_Value (BACnetDoorValue, Enumerated) at priority 12.",
+      "6.4::Supports DM-TS-B": "TimeSynchronization is executed (PICS section 3).",
+      "6.4::Supports DM-UTC-B": "UTCTimeSynchronization is executed (PICS section 3).",
+      "8.18::Supports non-password protected Backup": "DCC_PASSWORD is empty: ReinitializeDevice STARTBACKUP needs no password (main.cpp).",
+      "8.18::Supports non-password protected Restore": "DCC_PASSWORD is empty: ReinitializeDevice STARTRESTORE needs no password (main.cpp)."
+    },
+    "source": "operator"
+  },
+  "discovered": {
+    "capturedAt": "2026-10-26T14:01:21.143Z",
+    "readDeviceProperties": {
+      "applicationSoftwareVersion": "1.1.0",
+      "firmwareRevision": "6.0.23.0",
+      "modelName": "CAS BACnet Stack Example - B-ACC",
+      "objectName": "Chipkin Example B-ACC",
+      "protocolRevision": 30,
+      "protocolVersion": 1,
+      "vendorId": 389,
+      "vendorName": "Chipkin Automation Systems"
+    },
+    "whoIsResults": [
+      {
+        "deviceInstance": 389009,
+        "maxApdu": 1476,
+        "segmentation": "both",
+        "vendorId": 389
+      }
+    ]
+  },
+  "identity": {
+    "applicationSoftwareVersion": "1.1.0",
+    "deviceInstance": 389009,
+    "firmwareRevision": "6.0.23.0",
+    "modelName": "CAS BACnet Stack Example - B-ACC",
+    "objectName": "Chipkin Example B-ACC",
+    "protocolRevision": 30,
+    "protocolVersion": 1,
+    "vendorId": 389,
+    "vendorName": "Chipkin Automation Systems"
+  },
+  "network": {
+    "address": {
+      "ip": "127.0.0.1",
+      "port": 47845
+    },
+    "transport": "bacnetIp"
+  },
+  "objects": [
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "analogInput"
+      },
+      "objectName": "Bronze",
+      "properties": {
+        "covIncrement": {
+          "tag": "real",
+          "value": 1
+        },
+        "outOfService": {
+          "tag": "boolean",
+          "value": false
+        },
+        "units": {
+          "name": "degreesCelsius",
+          "tag": "enumerated",
+          "value": 62
+        }
+      }
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "binaryInput"
+      },
+      "objectName": "Emerald",
+      "properties": {
+        "outOfService": {
+          "tag": "boolean",
+          "value": false
+        },
+        "polarity": {
+          "name": "normal",
+          "tag": "enumerated",
+          "value": 0
+        }
+      }
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "calendar"
+      },
+      "objectName": "Cream",
+      "properties": {}
+    },
+    {
+      "objectIdentifier": {
+        "instance": 389009,
+        "type": "device"
+      },
+      "objectName": "Chipkin Example B-ACC",
+      "properties": {
+        "description": {
+          "tag": "characterString",
+          "value": "Chipkin CAS BACnet Stack example - B-ACC (Access Control Controller). Blocked Example: no access control (stack #2150, #2044). DS-RP/RPM/WP/WPM-B, DS-COV-B, AE-ACK-B, AE-INFO-B, SCHED-I-B, DM-BR-B, DM-DCC-B, DM-RD-B, time sync."
+        },
+        "maxApduLengthAccepted": {
+          "tag": "unsignedInt",
+          "value": 1476
+        },
+        "protocolRevision": {
+          "tag": "unsignedInt",
+          "value": 30
+        },
+        "protocolVersion": {
+          "tag": "unsignedInt",
+          "value": 1
+        },
+        "vendorIdentifier": {
+          "tag": "unsignedInt",
+          "value": 389
+        }
+      }
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "file"
+      },
+      "objectName": "Ivory",
+      "properties": {
+        "fileAccessMethod": {
+          "name": "streamAccess",
+          "tag": "enumerated",
+          "value": 1
+        },
+        "fileType": {
+          "tag": "characterString",
+          "value": "application/octet-stream"
+        },
+        "readOnly": {
+          "tag": "boolean",
+          "value": false
+        }
+      },
+      "writable": true
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "multiStateInput"
+      },
+      "objectName": "Hot Pink",
+      "properties": {
+        "numberOfStates": {
+          "tag": "unsignedInt",
+          "value": 3
+        },
+        "outOfService": {
+          "tag": "boolean",
+          "value": false
+        },
+        "stateText": {
+          "tag": "constructed",
+          "value": [
+            {
+              "tag": "characterString",
+              "value": "On"
+            },
+            {
+              "tag": "characterString",
+              "value": "Off"
+            },
+            {
+              "tag": "characterString",
+              "value": "Auto"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "notificationClass"
+      },
+      "objectName": "Crimson",
+      "properties": {
+        "ackRequired": {
+          "tag": "bitString",
+          "value": [
+            true,
+            false,
+            true
+          ]
+        },
+        "priority": {
+          "tag": "constructed",
+          "value": [
+            {
+              "tag": "unsignedInt",
+              "value": 100
+            },
+            {
+              "tag": "unsignedInt",
+              "value": 50
+            },
+            {
+              "tag": "unsignedInt",
+              "value": 200
+            }
+          ]
+        }
+      },
+      "writable": true
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "schedule"
+      },
+      "objectName": "Saffron",
+      "properties": {
+        "outOfService": {
+          "tag": "boolean",
+          "value": false
+        },
+        "priorityForWriting": {
+          "tag": "unsignedInt",
+          "value": 12
+        }
+      }
+    },
+    {
+      "notReadableProperties": [
+        131
+      ],
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "eventLog"
+      },
+      "objectName": "Beige",
+      "properties": {
+        "bufferSize": {
+          "tag": "unsignedInt",
+          "value": 64
+        },
+        "stopWhenFull": {
+          "tag": "boolean",
+          "value": false
+        }
+      }
+    },
+    {
+      "commandable": true,
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "accessDoor"
+      },
+      "objectName": "Cobalt",
+      "properties": {
+        "outOfService": {
+          "tag": "boolean",
+          "value": false
+        },
+        "relinquishDefault": {
+          "name": "lock",
+          "tag": "enumerated",
+          "value": 0
+        }
+      },
+      "writable": true
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "accessCredential"
+      },
+      "objectName": "Coral",
+      "properties": {
+        "credentialStatus": {
+          "name": "active",
+          "tag": "enumerated",
+          "value": 1
+        }
+      },
+      "writable": true
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "accessPoint"
+      },
+      "objectName": "Copper",
+      "properties": {
+        "eventDetectionEnable": {
+          "tag": "boolean",
+          "value": true
+        },
+        "eventEnable": {
+          "tag": "bitString",
+          "value": [
+            true,
+            true,
+            true
+          ]
+        },
+        "notificationClass": {
+          "tag": "unsignedInt",
+          "value": 1
+        },
+        "notifyType": {
+          "name": "alarm",
+          "tag": "enumerated",
+          "value": 0
+        },
+        "outOfService": {
+          "tag": "boolean",
+          "value": false
+        }
+      },
+      "writable": true
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "accessRights"
+      },
+      "objectName": "Cyan",
+      "properties": {
+        "enable": {
+          "tag": "boolean",
+          "value": true
+        }
+      },
+      "writable": true
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "accessZone"
+      },
+      "objectName": "Ebony",
+      "properties": {
+        "outOfService": {
+          "tag": "boolean",
+          "value": false
+        }
+      },
+      "writable": true
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "credentialDataInput"
+      },
+      "objectName": "Flax",
+      "properties": {
+        "outOfService": {
+          "tag": "boolean",
+          "value": false
+        }
+      }
+    },
+    {
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "networkPort"
+      },
+      "objectName": "Vermilion",
+      "properties": {
+        "apduLength": {
+          "tag": "unsignedInt",
+          "value": 1476
+        },
+        "networkType": {
+          "name": "ipv4",
+          "tag": "enumerated",
+          "value": 5
+        },
+        "outOfService": {
+          "tag": "boolean",
+          "value": false
+        },
+        "protocolLevel": {
+          "name": "bacnetApplication",
+          "tag": "enumerated",
+          "value": 2
+        }
+      }
+    }
+  ],
+  "provenance": {
+    "epicsHeader": {
+      "characterSetsSupported": "derived",
+      "dataLinkOptions": "derived",
+      "deviceProfile": "user-entered",
+      "productDescription": "user-entered",
+      "productName": "user-entered",
+      "specialFunctionality": "derived"
+    },
+    "generatedAt": "2026-10-26T14:01:35.633Z",
+    "snapshotCapturedAt": "2026-10-26T14:01:21.143Z",
+    "testPoints": 4
+  },
+  "testDatabase": {
+    "commandableTestPoints": [
+      {
+        "defaultPriority": 8,
+        "objectIdentifier": {
+          "instance": 1,
+          "type": "accessDoor"
+        },
+        "propertyIdentifier": "presentValue"
+      }
+    ],
+    "deviceConfigurationScenario": {
+      "notes": "The Device object is the only object whose identity can change, and only by start-up configuration: restart the example with --deviceID <n>. Object_Name is a source constant (main.cpp DEVICE_NAME). A WriteProperty to the Device's Object_Name or Object_Identifier is refused (write-access-denied), so nothing changes over the network.",
+      "objectNameChangeMethod": "replaceConfiguration",
+      "safeAlternateObjectIdentifier": {
+        "instance": 389909,
+        "type": "device"
+      }
+    },
+    "identityMutationTestPoints": [
+      {
+        "notes": "The Device object is the only object whose identity can change, and only by start-up configuration: restart the example with --deviceID <n>. Object_Name is a source constant (main.cpp DEVICE_NAME). A WriteProperty to the Device's Object_Name or Object_Identifier is refused (write-access-denied), so nothing changes over the network.",
+        "objectIdentifier": {
+          "instance": 389009,
+          "type": "device"
+        },
+        "safeAlternateObjectIdentifier": {
+          "instance": 389909,
+          "type": "device"
+        }
+      }
+    ],
+    "initiatedServices": [
+      "iAm",
+      "iHave",
+      "whoIs",
+      "confirmedCovNotification",
+      "unconfirmedCovNotification"
+    ],
+    "multiStateInputStateTextScenario": {
+      "initialSize": 3,
+      "numberOfStatesPropertyIdentifier": "numberOfStates",
+      "objectIdentifier": {
+        "instance": 1,
+        "type": "multiStateInput"
+      },
+      "stateTextPropertyIdentifier": "stateText"
+    },
+    "networkPort": {
+      "activeOne": {
+        "objectIdentifier": {
+          "instance": 1,
+          "type": "networkPort"
+        }
+      }
+    },
+    "objectDeletion": "none",
+    "passwords": {},
+    "rebootWindow": {
+      "activateChangesMs": 30000,
+      "coldstartMs": 60000,
+      "warmstartMs": 30000
+    },
+    "remoteWhoHasExecution": {
+      "allowedResponseNpdus": [
+        {
+          "destination": {
+            "dnet": 65535
+          }
+        },
+        {
+          "destination": {
+            "dnet": 99
+          }
+        },
+        {
+          "destination": {
+            "dadr": "01",
+            "dnet": 99
+          }
+        }
+      ],
+      "notes": [
+        "TD-side choice for the remote-network Who-Has / Who-Is rows (135.1 9.32.2.x, 9.33.2.x): remote network X = 99, source address Y = 01. The allowed response paths are the clause three: global broadcast, remote broadcast to X, the TD on X."
+      ],
+      "requestNpdu": {
+        "destination": {
+          "dnet": "globalBroadcast"
+        },
+        "source": {
+          "sadr": "01",
+          "snet": 99
+        }
+      }
+    },
+    "timeouts": {
+      "apdu": 3000,
+      "reply": 1000,
+      "segment": 1000
+    },
+    "writableTestPoints": [
+      {
+        "notes": "BACnetAuthorizationMode; the example accepts authorize (0) and deny-all (2) and refuses the rest with VALUE_OUT_OF_RANGE. Stored only.",
+        "objectIdentifier": {
+          "instance": 1,
+          "type": "accessPoint"
+        },
+        "propertyIdentifier": "authorizationMode",
+        "suggestedTestValue": 2
+      },
+      {
+        "notes": "Unsigned32; stored only.",
+        "objectIdentifier": {
+          "instance": 1,
+          "type": "accessCredential"
+        },
+        "propertyIdentifier": "globalIdentifier",
+        "suggestedTestValue": 1234
+      },
+      {
+        "notes": "BOOLEAN; stored only.",
+        "objectIdentifier": {
+          "instance": 1,
+          "type": "file"
+        },
+        "propertyIdentifier": "archive",
+        "suggestedTestValue": true
+      }
+    ]
+  }
+}

@@ -127,7 +127,7 @@ after any change. Beyond them, verification is behavioural:
    send **Who-Is** and confirm **I-Am** from the device instance.
 3. **ReadProperty** every required property of every object and confirm the
    values; confirm `Protocol_Revision` is 30 and `Object_List` lists all
-   objects. Expect the six TODO.md #2 properties (stack #2150) to fail.
+   objects. Expect the five TODO.md #2 properties (stack #2150) to fail.
 4. **Door command**: WriteProperty Cobalt's `Present_Value` to `unlock`(1) at a
    priority; confirm `Lock_Status`/`Door_Status` follow; relinquish and
    confirm it falls back to `Relinquish_Default`.
